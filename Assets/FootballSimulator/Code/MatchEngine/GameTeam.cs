@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 using FStudio.MatchEngine.Players;
 using FStudio.MatchEngine.Players.Positions;
@@ -213,6 +213,43 @@ namespace FStudio.MatchEngine {
             return basePlayer;
         }
 
+        /// <summary>
+        /// Spawn a player dynamically during the match (for Call5Enemy feature)
+        /// </summary>
+        public PlayerBase SpawnPlayerDynamically(MatchPlayer matchPlayer, Vector3 spawnPosition) {
+            var basePlayer = CreateBasePlayer(matchPlayer);
+            
+            if (basePlayer != null) {
+                // Đánh dấu là cầu thủ spawn động
+                basePlayer.IsDynamicallySpawned = true;
+                
+                // Set vị trí spawn
+                basePlayer.PlayerController.SetInstantPosition(spawnPosition);
+                
+                // Quay về phía khung thành đối phương
+                var targetGoalNet = TeamId == 0 ? MatchManager.Current.goalNet2 : MatchManager.Current.goalNet1;
+                var lookDirection = targetGoalNet.Position - spawnPosition;
+                basePlayer.PlayerController.SetInstantRotation(Quaternion.LookRotation(lookDirection));
+                
+                // Enable physics
+                basePlayer.PlayerController.IsPhysicsEnabled = true;
+                
+                // Thêm vào array GamePlayers
+                var newArray = new PlayerBase[GamePlayers.Length + 1];
+                GamePlayers.CopyTo(newArray, 0);
+                newArray[GamePlayers.Length] = basePlayer;
+                GamePlayers = newArray;
+                
+                // Update MatchManager.AllPlayers
+                MatchManager.AllPlayers = MatchManager.Current.GameTeam1.GamePlayers
+                    .Concat(MatchManager.Current.GameTeam2.GamePlayers);
+                
+                Debug.Log($"[GameTeam] Dynamically spawned player #{matchPlayer.Number} at {spawnPosition}");
+            }
+            
+            return basePlayer;
+        }
+
         public void SetTeam(MatchTeam team) {
             Debug.LogFormat("[GameTeam] Set Team to {0}", team.Team.TeamName);
             Team = team;
@@ -419,8 +456,10 @@ namespace FStudio.MatchEngine {
 
             const int cornerKeyPlayerCount = 5;
 
-            // max 9 player.
-            var orderPlayersByHeight = GamePlayers.Where (x=> x!= cornerKicker && !x.IsGK).OrderByDescending (x => x.MatchPlayer.Player.height);
+            // max 9 player, bỏ qua cầu thủ spawn động
+            var orderPlayersByHeight = GamePlayers
+                .Where(x => x != cornerKicker && !x.IsGK && !x.IsDynamicallySpawned)
+                .OrderByDescending(x => x.MatchPlayer.Player.height);
 
             var orderPositionsToGoalNetDistance = 
                 basePositioning.FieldPositions.Where (x=>x.Position != Positions.GK).
@@ -478,11 +517,18 @@ namespace FStudio.MatchEngine {
 
             var orderedBasePositions = KickOffPositioning.Current.FieldPositions.OrderBy(x => x.VerticalPlacement).ToArray();
 
-            var playersWithPositions = GamePlayers.Select(x => (x, FormalPositioning.Current.GetPosition(x.MatchPlayer.Position))).OrderBy(x => x.Item2.VerticalPlacement).ToArray();
+            // Chỉ lấy cầu thủ gốc (không phải spawn động) và giới hạn 11 người
+            var playersWithPositions = GamePlayers
+                .Where(x => !x.IsDynamicallySpawned)
+                .Take(11)
+                .Select(x => (x, FormalPositioning.Current.GetPosition(x.MatchPlayer.Position)))
+                .OrderBy(x => x.Item2.VerticalPlacement)
+                .ToArray();
 
             var ballPosition = Ball.Current.transform.position;
 
             foreach (var player in playersWithPositions) {
+                if (skip >= orderedBasePositions.Length) break; // Safety check
                 var targetPosition = orderedBasePositions[skip++];
                 PutPlayerToFieldPosition(player.x, targetPosition, goalNet, fieldEndX, fieldEndY, ballPosition);
             }
@@ -501,11 +547,18 @@ namespace FStudio.MatchEngine {
 
             var orderedBasePositions = KickOffPositioning_Starter.Current.FieldPositions.OrderBy(x => x.VerticalPlacement).ToArray();
 
-            var playersWithPositions = GamePlayers.Select(x => (x, FormalPositioning.Current.GetPosition(x.MatchPlayer.Position))).OrderBy (x=>x.Item2.VerticalPlacement).ToArray();
+            // Chỉ lấy cầu thủ gốc (không phải spawn động) và giới hạn 11 người
+            var playersWithPositions = GamePlayers
+                .Where(x => !x.IsDynamicallySpawned)
+                .Take(11)
+                .Select(x => (x, FormalPositioning.Current.GetPosition(x.MatchPlayer.Position)))
+                .OrderBy(x => x.Item2.VerticalPlacement)
+                .ToArray();
 
             var ballPosition = Ball.Current.transform.position;
 
             foreach (var player in playersWithPositions) {
+                if (skip >= orderedBasePositions.Length) break; // Safety check
                 var targetPosition = orderedBasePositions[skip++];
                 PutPlayerToFieldPosition(player.x, targetPosition, goalNet, fieldEndX, fieldEndY, ballPosition);
             }
@@ -518,10 +571,10 @@ namespace FStudio.MatchEngine {
             Vector3 kickerPositioningOffset = default,
             Positions excludePosition = Positions.ParametersCount) {
 
-            // put our closest player to the center.
-            var sortedByDistanceToBall = GamePlayers.
-            Where(x => x.MatchPlayer.Position != excludePosition).
-            OrderBy(x => Vector3.Distance(x.Position, ballPosition));
+            // put our closest player to the center, bỏ qua cầu thủ spawn động
+            var sortedByDistanceToBall = GamePlayers
+                .Where(x => x.MatchPlayer.Position != excludePosition && !x.IsDynamicallySpawned)
+                .OrderBy(x => Vector3.Distance(x.Position, ballPosition));
 
             if (sortedByDistanceToBall.Count() > 0) {
                 var closest = sortedByDistanceToBall.First();

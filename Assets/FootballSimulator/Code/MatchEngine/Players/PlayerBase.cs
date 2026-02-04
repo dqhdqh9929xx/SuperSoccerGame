@@ -229,6 +229,11 @@ namespace FStudio.MatchEngine.Players {
 
         public MatchPlayer MatchPlayer;
 
+        /// <summary>
+        /// True if this player was spawned dynamically during the match (e.g., Call5Enemy feature)
+        /// </summary>
+        public bool IsDynamicallySpawned { get; set; }
+
         public PlayerBase (GameTeam gameTeam, MatchPlayer matchPlayer, Material kitMaterial) {
             this.MatchPlayer = matchPlayer;
             this.GameTeam = gameTeam;

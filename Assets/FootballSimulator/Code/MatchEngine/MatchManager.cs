@@ -199,6 +199,11 @@ namespace FStudio.MatchEngine {
         private GeneralUserInput generalInput;
 
         /// <summary>
+        /// Call5Enemy feature manager
+        /// </summary>
+        private Call5EnemyManager call5EnemyManager;
+
+        /// <summary>
         /// Which team started, team1 or team2?
         /// </summary>
         public int whichTeamStarted = default;
@@ -450,6 +455,29 @@ namespace FStudio.MatchEngine {
             }
             //
 
+            // Initialize Call5Enemy feature
+            if (Current.call5EnemyManager == null) {
+                Current.call5EnemyManager = Current.gameObject.AddComponent<Call5EnemyManager>();
+                
+                // Tìm Call5EnemyUI (bao gồm cả inactive objects)
+                GameObject call5EnemyUI = null;
+                GameObject[] allObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+                foreach (var obj in allObjects) {
+                    if (obj.name == "Call5EnemyUI" && obj.scene.name != null) {
+                        call5EnemyUI = obj;
+                        break;
+                    }
+                }
+                
+                if (call5EnemyUI != null) {
+                    Current.call5EnemyManager.Initialize(call5EnemyUI);
+                } else {
+                    Debug.LogWarning("[MatchManager] Call5EnemyUI not found in scene!");
+                }
+                
+                Debug.Log("[MatchManager] Call5EnemyManager initialized");
+            }
+
             GameInput.SwitchToMatchEngine();
         }
 
@@ -553,6 +581,12 @@ namespace FStudio.MatchEngine {
             MatchFlags &= ~MatchFlags;
 
             Current.generalInput.Clear();
+
+            // Cleanup Call5Enemy manager
+            if (Current.call5EnemyManager != null) {
+                Destroy(Current.call5EnemyManager);
+                Current.call5EnemyManager = null;
+            }
 
             ClearMatchAssets();
 
