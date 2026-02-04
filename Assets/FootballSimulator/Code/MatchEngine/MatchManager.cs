@@ -137,8 +137,63 @@ namespace FStudio.MatchEngine {
         /// </summary>
         public GoalNet HomeGoalNet => goalNet1.Position.z <= goalNet2.Position.z ? goalNet1 : goalNet2;
 
+        // Directional Light control for super kick effect
+        private Light directionalLight; // Tự động tìm Directional Light trong scene
+        private const float NORMAL_LIGHT_INTENSITY = 1.1f; // Độ sáng bình thường
+        private const float SUPER_KICK_LIGHT_INTENSITY = 0.3f; // Độ sáng khi super kick (tối hơn)
+        private const float LIGHT_TRANSITION_SPEED = 2f; // Tốc độ chuyển đổi ánh sáng
+
+        /// <summary>
+        /// Tìm Directional Light trong scene hiện tại
+        /// </summary>
+        private void FindDirectionalLight() {
+            if (directionalLight != null) return;
+            
+            var allLights = FindObjectsOfType<Light>();
+            foreach (var light in allLights) {
+                if (light.type == LightType.Directional) {
+                    directionalLight = light;
+                    Debug.Log($"[MatchManager] Found Directional Light: {light.name} with intensity {light.intensity}");
+                    break;
+                }
+            }
+            
+            if (directionalLight == null) {
+                Debug.LogWarning("[MatchManager] No Directional Light found in scene for super kick effect");
+            }
+        }
+
         public void SetSuperKick(bool value) {
             IsSuperKick = value;
+            
+            // Điều chỉnh ánh sáng
+            if (directionalLight != null) {
+                if (value) {
+                    // Kích hoạt super_kick: làm tối
+                    StartCoroutine(TransitionLightIntensity(SUPER_KICK_LIGHT_INTENSITY));
+                    Debug.Log("[MatchManager] Super Kick activated - dimming light");
+                } else {
+                    // Kết thúc super_kick: sáng lại bình thường
+                    StartCoroutine(TransitionLightIntensity(NORMAL_LIGHT_INTENSITY));
+                    Debug.Log("[MatchManager] Super Kick ended - restoring light");
+                }
+            }
+        }
+
+        private System.Collections.IEnumerator TransitionLightIntensity(float targetIntensity) {
+            if (directionalLight == null) yield break;
+            
+            float currentIntensity = directionalLight.intensity;
+            float elapsed = 0f;
+            float duration = Mathf.Abs(targetIntensity - currentIntensity) / LIGHT_TRANSITION_SPEED;
+            
+            while (elapsed < duration) {
+                elapsed += Time.deltaTime;
+                directionalLight.intensity = Mathf.Lerp(currentIntensity, targetIntensity, elapsed / duration);
+                yield return null;
+            }
+            
+            directionalLight.intensity = targetIntensity;
         }
 
         private GeneralUserInput generalInput;
@@ -156,6 +211,9 @@ namespace FStudio.MatchEngine {
         protected override void OnEnable() {
             base.OnEnable();
 
+            // Tìm Directional Light trong scene khi load
+            FindDirectionalLight();
+
             EventManager.Subscribe<KickOffEvent>(KickOff);
             EventManager.Subscribe<ThrowInEvent>(OnThrowIn);
             EventManager.Subscribe<OutEvent>(OnCorner);
@@ -166,6 +224,9 @@ namespace FStudio.MatchEngine {
         }
 
         private void OnDisable() {
+            // Reset Directional Light reference khi disable
+            directionalLight = null;
+
             EventManager.UnSubscribe<KickOffEvent>(KickOff);
             EventManager.UnSubscribe<ThrowInEvent>(OnThrowIn);
             EventManager.UnSubscribe<OutEvent>(OnCorner);
@@ -176,19 +237,19 @@ namespace FStudio.MatchEngine {
         }
 
         private void OnBallOutDisableSuperKick(OutEvent _) {
-            IsSuperKick = false;
+            SetSuperKick(false);
         }
 
         private void OnShootWentOutDisableSuperKick(ShootWentOutEvent _) {
-            IsSuperKick = false;
+            SetSuperKick(false);
         }
 
         private void OnGoalDisableSuperKick(GoalEvent _) {
-            IsSuperKick = false;
+            SetSuperKick(false);
         }
 
         private void OnKeeperSavesDisableSuperKick(KeeperSavesTheBallEvent _) {
-            IsSuperKick = false;
+            SetSuperKick(false);
         }
 
         [Preserve]
@@ -224,7 +285,7 @@ namespace FStudio.MatchEngine {
         }
 
         private void OnThrowIn(ThrowInEvent throwInEvent) {
-            IsSuperKick = false;
+            SetSuperKick(false);
 
             var ballPosition = throwInEvent.Position;
 

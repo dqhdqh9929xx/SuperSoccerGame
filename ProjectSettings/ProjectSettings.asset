@@ -4,7 +4,7 @@
 PlayerSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 26
-  productGUID: 00000000000000000000000000000000
+  productGUID: 7be8f665df44d8b4283942037bd10a66
   AndroidProfiler: 0
   AndroidFilterTouchesWhenObscured: 0
   AndroidEnableSustainedPerformanceMode: 0
@@ -862,7 +862,7 @@ PlayerSettings:
   - Normal
   - Good
   - Console
-  projectName: World Football Online
+  projectName: SoccerGame 2026-02-03_19-24-52
   organizationId: dqhdqh9929xx
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
