@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 4887197897155262255}
   - component: {fileID: 4887197897155262252}
   - component: {fileID: 4887197897155262259}
+  - component: {fileID: -2585382702126711487}
   m_Layer: 8
   m_Name: Ball
   m_TagString: Untagged
@@ -26,6 +27,7 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4887197897155262258}
+  serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.93544406, z: -0, w: 0.35347486}
   m_LocalPosition: {x: -1, y: -1, z: -1}
   m_LocalScale: {x: 0.9, y: 0.9, z: 0.9}
@@ -33,7 +35,6 @@ Transform:
   m_Children:
   - {fileID: 4887197897214377397}
   m_Father: {fileID: 0}
-  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!54 &4887197897155262255
 Rigidbody:
@@ -42,10 +43,21 @@ Rigidbody:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4887197897155262258}
-  serializedVersion: 2
+  serializedVersion: 4
   m_Mass: 0.1
   m_Drag: 0.1
   m_AngularDrag: 0.1
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 1
@@ -103,12 +115,39 @@ CapsuleCollider:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4887197897155262258}
   m_Material: {fileID: 13400000, guid: c8ab8cc2e08ea1e40a97dcf87bbe2301, type: 2}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
   m_IsTrigger: 0
+  m_ProvidesContacts: 0
   m_Enabled: 1
+  serializedVersion: 2
   m_Radius: 0.13
   m_Height: 0
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &-2585382702126711487
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4887197897155262258}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c3f8d9e2a1b4c5f8e9d0a1b2c3d4e5f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  powerBallPrefab: {fileID: 8110690960064491615, guid: ca75be3796b52b049851d64b10be10f1, type: 3}
+  powerThreshold: 25
+  deactivateVelocity: 5
+  minActiveTime: 0.3
+  normalBallVisual: {fileID: 0}
+  enableDebugLogs: 1
 --- !u!1 &4887197897214377396
 GameObject:
   m_ObjectHideFlags: 0
@@ -132,11 +171,11 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4887197897214377396}
+  serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 4887197897155262254}
-  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
