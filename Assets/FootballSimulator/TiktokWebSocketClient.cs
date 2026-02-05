@@ -274,7 +274,8 @@ public class TiktokWebSocketClient : MonoBehaviour
                     break;
                     
                 case "gift":
-                    HandleGiftEvent(eventData.userName, eventData.giftName);
+                    int repeatCount = eventData.repeatCount > 0 ? eventData.repeatCount : 1;
+                    HandleGiftEvent(eventData.userName, eventData.giftName, repeatCount);
                     break;
                     
                 default:
@@ -326,7 +327,7 @@ public class TiktokWebSocketClient : MonoBehaviour
     /// Xử lý Gift event từ TikTok
     /// Phân loại Rose hoặc Perfume
     /// </summary>
-    private void HandleGiftEvent(string userName, string giftName)
+    private void HandleGiftEvent(string userName, string giftName, int repeatCount = 1)
     {
         if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(giftName))
         {
@@ -337,7 +338,7 @@ public class TiktokWebSocketClient : MonoBehaviour
         // Kiểm tra loại quà
         if (giftName.Equals(roseGiftIdentifier, StringComparison.OrdinalIgnoreCase))
         {
-            HandleRoseGift(userName);
+            HandleRoseGift(userName, repeatCount);
         }
         else if (giftName.Equals(perfumeGiftIdentifier, StringComparison.OrdinalIgnoreCase))
         {
@@ -354,32 +355,28 @@ public class TiktokWebSocketClient : MonoBehaviour
     
     /// <summary>
     /// Xử lý Rose Gift
-    /// → Hiển thị tên user + Trigger Super Kick
+    /// → Add vào queue Super Kick (combo = số lần add)
     /// </summary>
-    private void HandleRoseGift(string userName)
+    private void HandleRoseGift(string userName, int repeatCount = 1)
     {
-        Debug.Log($"[TiktokWebSocketClient] 🌹 ROSE GIFT from {userName}!");
-        
-        // 1. Gắn tên vào UI
-        if (receiverTest != null && receiverTest.currentNameSuperKick != null)
+        if (repeatCount > 1)
         {
-            receiverTest.currentNameSuperKick.text = userName;
-            Debug.Log($"[TiktokWebSocketClient] ✅ Tên '{userName}' đã hiển thị trên UI");
+            Debug.Log($"[TiktokWebSocketClient] 🌹 ROSE GIFT x{repeatCount} from {userName}!");
         }
         else
         {
-            Debug.LogWarning("[TiktokWebSocketClient] ⚠️ Cannot display name - ReceiverTest or UI text is null!");
+            Debug.Log($"[TiktokWebSocketClient] 🌹 ROSE GIFT from {userName}!");
         }
         
-        // 2. Trigger Super Kick
-        if (tiktokReceiver != null)
+        // Add vào queue (combo count = số lần add)
+        if (heartManager != null)
         {
-            tiktokReceiver.TriggerSuperKick();
-            Debug.Log($"[TiktokWebSocketClient] ⚡ Super Kick activated cho {userName}!");
+            heartManager.AddToSuperKickQueue(userName, repeatCount);
+            Debug.Log($"[TiktokWebSocketClient] ✅ Added {userName} x{repeatCount} to Super Kick queue!");
         }
         else
         {
-            Debug.LogWarning("[TiktokWebSocketClient] ⚠️ Cannot trigger Super Kick - TiktokReceiver is null!");
+            Debug.LogWarning("[TiktokWebSocketClient] ⚠️ Cannot add to queue - HeartManager is null!");
         }
     }
     
@@ -436,12 +433,12 @@ public class TiktokWebSocketClient : MonoBehaviour
     /// <summary>
     /// Simulate Rose Gift cho testing
     /// </summary>
-    public void SimulateRoseGift(string userName)
+    public void SimulateRoseGift(string userName, int repeatCount = 1)
     {
         if (testMode || Application.isEditor)
         {
-            Debug.Log($"[TiktokWebSocketClient] 🧪 TEST: Simulating Rose Gift from {userName}");
-            HandleRoseGift(userName);
+            Debug.Log($"[TiktokWebSocketClient] 🧪 TEST: Simulating Rose Gift x{repeatCount} from {userName}");
+            HandleRoseGift(userName, repeatCount);
         }
     }
     
@@ -477,4 +474,5 @@ public class TikTokEvent
     public string giftName;  // Tên quà (nếu type = gift)
     public int giftId;       // ID quà (optional)
     public int likeCount;    // Số like (optional)
+    public int repeatCount;  // Combo count cho gift (optional, default = 1)
 }

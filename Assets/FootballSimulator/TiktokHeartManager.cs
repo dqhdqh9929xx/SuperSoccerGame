@@ -7,6 +7,7 @@ using FStudio.MatchEngine;
 /// Quản lý hệ thống tap tim từ TikTok
 /// - Thu thập 100 taps từ viewers
 /// - Random chọn 1 người để trigger Super Kick
+/// - Quản lý hàng đợi Super Kick (queue system)
 /// </summary>
 public class TiktokHeartManager : MonoBehaviour
 {
@@ -14,8 +15,16 @@ public class TiktokHeartManager : MonoBehaviour
     [Tooltip("Số lượng heart cần để trigger Super Kick")]
     public int heartThreshold = 100;
     
+    [Tooltip("Thời gian chờ giữa các Super Kick (giây)")]
+    public float superKickDelay = 3f;
+    
     [Header("Debug")]
     public bool showDebugLogs = true;
+    
+    [Header("Queue Status (Read Only)")]
+    [SerializeField] private int queueCount = 0;
+    [SerializeField] private float currentCountdown = 0f;
+    [SerializeField] private bool isWaitingForNextKick = false;
     
     // Mảng lưu tên người tap (100 phần tử)
     private string[] heartTappers = new string[100];
@@ -26,8 +35,15 @@ public class TiktokHeartManager : MonoBehaviour
     // Flag để kiểm tra xem Super Kick có đang active không
     private bool isSuperKickActive = false;
     
-    // Tên người được chọn random khi đủ 100 hearts
+    // Tên người đang được hiển thị (đang Super Kick)
     private string selectedUserName = "";
+    
+    // ===== QUEUE SYSTEM =====
+    // Danh sách user đang chờ trigger Super Kick
+    public List<string> ListViewerTiktokSuperKick = new List<string>();
+    
+    // Countdown timer
+    private float countdown = 0f;
     
     // Reference
     private TiktokReceiver tiktokReceiver;
@@ -53,6 +69,11 @@ public class TiktokHeartManager : MonoBehaviour
     
     void Update()
     {
+        // Cập nhật queue status cho debug
+        queueCount = ListViewerTiktokSuperKick.Count;
+        currentCountdown = countdown;
+        isWaitingForNextKick = countdown > 0;
+        
         // Kiểm tra trạng thái Super Kick từ MatchManager
         if (MatchManager.Current != null)
         {
@@ -66,6 +87,19 @@ public class TiktokHeartManager : MonoBehaviour
                 {
                     Debug.Log("[TiktokHeartManager] ✅ Super Kick ended. Heart tapping enabled.");
                 }
+                
+                // Clear tên hiện tại
+                selectedUserName = "";
+                
+                // Bắt đầu countdown nếu còn user trong queue
+                if (ListViewerTiktokSuperKick.Count > 0)
+                {
+                    countdown = superKickDelay;
+                    if (showDebugLogs)
+                    {
+                        Debug.Log($"[TiktokHeartManager] ⏳ Starting countdown {superKickDelay}s for next Super Kick...");
+                    }
+                }
             }
             // Nếu Super Kick vừa bật, block tap
             else if (!isSuperKickActive && superKickStatus)
@@ -75,6 +109,30 @@ public class TiktokHeartManager : MonoBehaviour
                 {
                     Debug.Log("[TiktokHeartManager] ⛔ Super Kick active. Heart tapping disabled.");
                 }
+            }
+        }
+        
+        // ===== QUEUE PROCESSING =====
+        // Nếu Super Kick không active và có user trong queue
+        if (!isSuperKickActive && ListViewerTiktokSuperKick.Count > 0)
+        {
+            // Nếu chưa có countdown, bắt đầu countdown
+            if (countdown <= 0)
+            {
+                countdown = superKickDelay;
+                if (showDebugLogs)
+                {
+                    Debug.Log($"[TiktokHeartManager] ⏳ Starting countdown {superKickDelay}s...");
+                }
+            }
+            
+            // Countdown
+            countdown -= Time.deltaTime;
+            
+            // Khi countdown hết, trigger Super Kick cho user đầu tiên
+            if (countdown <= 0)
+            {
+                ProcessNextSuperKick();
             }
         }
     }
@@ -112,7 +170,7 @@ public class TiktokHeartManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Random chọn 1 người từ mảng và trigger Super Kick
+    /// Random chọn 1 người từ mảng và ADD VÀO QUEUE (không trigger trực tiếp)
     /// </summary>
     private void TriggerSuperKickForRandomUser()
     {
@@ -123,12 +181,77 @@ public class TiktokHeartManager : MonoBehaviour
         
         // Random index từ 0 đến 99
         int randomIndex = Random.Range(0, heartThreshold);
-        selectedUserName = heartTappers[randomIndex];
+        string winnerName = heartTappers[randomIndex];
         
         if (showDebugLogs)
         {
-            Debug.Log($"[TiktokHeartManager] 🎉 WINNER: {selectedUserName} (index {randomIndex})");
-            Debug.Log($"[TiktokHeartManager] Triggering Super Kick for {selectedUserName}!");
+            Debug.Log($"[TiktokHeartManager] 🎉 WINNER: {winnerName} (index {randomIndex})");
+        }
+        
+        // Add vào queue thay vì trigger trực tiếp
+        AddToSuperKickQueue(winnerName);
+        
+        // Reset mảng
+        ResetHeartArray();
+    }
+    
+    /// <summary>
+    /// Thêm user vào hàng đợi Super Kick
+    /// </summary>
+    /// <param name="userName">Tên user</param>
+    /// <param name="count">Số lần add (cho combo Rose)</param>
+    public void AddToSuperKickQueue(string userName, int count = 1)
+    {
+        if (string.IsNullOrEmpty(userName))
+        {
+            Debug.LogWarning("[TiktokHeartManager] Cannot add empty userName to queue!");
+            return;
+        }
+        
+        // Add vào queue theo số lần count
+        for (int i = 0; i < count; i++)
+        {
+            ListViewerTiktokSuperKick.Add(userName);
+        }
+        
+        if (showDebugLogs)
+        {
+            if (count > 1)
+            {
+                Debug.Log($"[TiktokHeartManager] ➕ Added {userName} x{count} to Super Kick queue! Total in queue: {ListViewerTiktokSuperKick.Count}");
+            }
+            else
+            {
+                Debug.Log($"[TiktokHeartManager] ➕ Added {userName} to Super Kick queue! Total in queue: {ListViewerTiktokSuperKick.Count}");
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Process Super Kick cho user đầu tiên trong queue
+    /// </summary>
+    private void ProcessNextSuperKick()
+    {
+        if (ListViewerTiktokSuperKick.Count == 0)
+        {
+            if (showDebugLogs)
+            {
+                Debug.Log("[TiktokHeartManager] Queue is empty, nothing to process.");
+            }
+            return;
+        }
+        
+        // Lấy user đầu tiên
+        string userName = ListViewerTiktokSuperKick[0];
+        ListViewerTiktokSuperKick.RemoveAt(0);
+        
+        // Set tên hiện tại
+        selectedUserName = userName;
+        
+        if (showDebugLogs)
+        {
+            Debug.Log($"[TiktokHeartManager] ⚡ Processing Super Kick for: {userName}");
+            Debug.Log($"[TiktokHeartManager] Remaining in queue: {ListViewerTiktokSuperKick.Count}");
         }
         
         // Trigger Super Kick
@@ -141,8 +264,8 @@ public class TiktokHeartManager : MonoBehaviour
             Debug.LogWarning("[TiktokHeartManager] Cannot trigger Super Kick - TiktokReceiver is null!");
         }
         
-        // Reset mảng
-        ResetHeartArray();
+        // Reset countdown
+        countdown = 0;
     }
     
     /// <summary>
@@ -192,5 +315,26 @@ public class TiktokHeartManager : MonoBehaviour
     public void ClearSelectedUserName()
     {
         selectedUserName = "";
+    }
+    
+    /// <summary>
+    /// Lấy số lượng user đang chờ trong queue
+    /// </summary>
+    public int GetQueueCount()
+    {
+        return ListViewerTiktokSuperKick.Count;
+    }
+    
+    /// <summary>
+    /// Clear toàn bộ queue (dùng khi cần reset)
+    /// </summary>
+    public void ClearQueue()
+    {
+        ListViewerTiktokSuperKick.Clear();
+        countdown = 0;
+        if (showDebugLogs)
+        {
+            Debug.Log("[TiktokHeartManager] Queue cleared!");
+        }
     }
 }

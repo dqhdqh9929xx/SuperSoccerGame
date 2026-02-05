@@ -5,9 +5,12 @@ using FStudio.MatchEngine;
 
 /// <summary>
 /// Test script cho TiktokReceiver
-/// Bấm phím T → Trigger Super Kick
+/// Bấm phím T → Trigger Super Kick (direct)
 /// Bấm phím Y → Trigger Call 5 Enemy
-/// Bấm phím U → Tăng Heart count (test TikTok viewer)
+/// Bấm phím U → Add Heart (test TikTok viewer)
+/// Bấm phím R → Rose Gift x1 (queue)
+/// Bấm phím O → Rose Gift x5 Combo
+/// Bấm phím P → Perfume Gift
 /// </summary>
 public class TiktokReceiverTest : MonoBehaviour {
     [Header("Test Keys")]
@@ -20,6 +23,7 @@ public class TiktokReceiverTest : MonoBehaviour {
     [Header("References")]
     private TiktokReceiver receiver;
     private TiktokHeartManager heartManager;
+    private TiktokWebSocketClient wsClient;
     
     [Header("UI")]
     [Tooltip("Hiện hướng dẫn trên màn hình")]
@@ -45,6 +49,7 @@ public class TiktokReceiverTest : MonoBehaviour {
         
         receiver = FindObjectOfType<TiktokReceiver>();
         heartManager = FindObjectOfType<TiktokHeartManager>();
+        wsClient = FindObjectOfType<TiktokWebSocketClient>();
         
         if (receiver == null) {
             Debug.LogError("[TiktokReceiverTest] ❌ TiktokReceiver NOT FOUND in scene!");
@@ -58,6 +63,12 @@ public class TiktokReceiverTest : MonoBehaviour {
             Debug.LogError("[TiktokReceiverTest] Please create a GameObject with TiktokHeartManager component!");
         } else {
             Debug.Log($"[TiktokReceiverTest] ✅ TiktokHeartManager FOUND!");
+        }
+        
+        if (wsClient == null) {
+            Debug.LogWarning("[TiktokReceiverTest] ⚠️ TiktokWebSocketClient NOT FOUND (Rose/Perfume test disabled)");
+        } else {
+            Debug.Log($"[TiktokReceiverTest] ✅ TiktokWebSocketClient FOUND!");
         }
         
         Debug.Log($"[TiktokReceiverTest] ✅ Ready! Press {superKickKey} for Super Kick, {call5EnemyKey} for Call 5 Enemy");
@@ -86,6 +97,14 @@ public class TiktokReceiverTest : MonoBehaviour {
             heartManager = FindObjectOfType<TiktokHeartManager>();
             if (heartManager != null) {
                 Debug.Log("[TiktokReceiverTest] ✅ TiktokHeartManager found in Update!");
+            }
+        }
+        
+        // Check nếu wsClient null thì cố tìm lại
+        if (wsClient == null) {
+            wsClient = FindObjectOfType<TiktokWebSocketClient>();
+            if (wsClient != null) {
+                Debug.Log("[TiktokReceiverTest] ✅ TiktokWebSocketClient found in Update!");
             }
         }
         
@@ -124,6 +143,63 @@ public class TiktokReceiverTest : MonoBehaviour {
             else
             {
                 Debug.LogWarning("[TiktokReceiverTest] HeartManager is null!");
+            }
+        }
+        
+        // Test Rose Gift x1 (R key)
+        if (keyboard.rKey.wasPressedThisFrame) {
+            if (wsClient != null)
+            {
+                // Random chọn 1 trong 5 user
+                int randomUserIndex = Random.Range(0, testUsers.Length);
+                string selectedUser = testUsers[randomUserIndex];
+                
+                // Simulate Rose Gift x1
+                wsClient.SimulateRoseGift(selectedUser, 1);
+                
+                Debug.Log($"[TiktokReceiverTest] 🌹 KEY PRESSED: R → Rose Gift x1 from {selectedUser}");
+            }
+            else
+            {
+                Debug.LogWarning("[TiktokReceiverTest] WebSocketClient is null!");
+            }
+        }
+        
+        // Test Rose Gift x5 Combo (O key)
+        if (keyboard.oKey.wasPressedThisFrame) {
+            if (wsClient != null)
+            {
+                // Random chọn 1 trong 5 user
+                int randomUserIndex = Random.Range(0, testUsers.Length);
+                string selectedUser = testUsers[randomUserIndex];
+                
+                // Simulate Rose Gift x5 (combo)
+                wsClient.SimulateRoseGift(selectedUser, 5);
+                
+                Debug.Log($"[TiktokReceiverTest] 🌹🌹🌹🌹🌹 KEY PRESSED: O → Rose Gift x5 COMBO from {selectedUser}");
+            }
+            else
+            {
+                Debug.LogWarning("[TiktokReceiverTest] WebSocketClient is null!");
+            }
+        }
+        
+        // Test Perfume Gift (P key)
+        if (keyboard.pKey.wasPressedThisFrame) {
+            if (wsClient != null)
+            {
+                // Random chọn 1 trong 5 user (nhưng không hiển thị tên)
+                int randomUserIndex = Random.Range(0, testUsers.Length);
+                string selectedUser = testUsers[randomUserIndex];
+                
+                // Simulate Perfume Gift
+                wsClient.SimulatePerfumeGift(selectedUser);
+                
+                Debug.Log($"[TiktokReceiverTest] 💐 KEY PRESSED: P → Perfume Gift (anonymous)");
+            }
+            else
+            {
+                Debug.LogWarning("[TiktokReceiverTest] WebSocketClient is null!");
             }
         }
         
@@ -190,17 +266,21 @@ public class TiktokReceiverTest : MonoBehaviour {
         
         int currentCount = heartManager != null ? heartManager.GetCurrentHeartCount() : 0;
         bool isSuperKickActive = heartManager != null ? heartManager.IsSuperKickActive() : false;
+        int queueCount = heartManager != null ? heartManager.GetQueueCount() : 0;
         
         string instructions = 
             "=== TIKTOK RECEIVER TEST ===\n" +
-            $"{superKickKey} → Super Kick\n" +
+            $"{superKickKey} → Super Kick (direct)\n" +
             $"{call5EnemyKey} → Call 5 Enemy\n" +
             "U → Add Heart (random user)\n" +
-            $"    💖 Count: {currentCount}/100\n" +
-            $"    {(isSuperKickActive ? "⛔ SUPER KICK ACTIVE" : "✅ Tap enabled")}\n" +
-            "1 → Command: 'superkick'\n" +
-            "2 → Command: 'call5enemy'";
+            "R → Rose Gift x1 (queue)\n" +
+            "O → Rose Gift x5 COMBO\n" +
+            "P → Perfume Gift (Call5Enemy)\n" +
+            $"    💖 Hearts: {currentCount}/100\n" +
+            $"    📋 Queue: {queueCount} waiting\n" +
+            $"    {(isSuperKickActive ? "⛔ SUPER KICK ACTIVE" : "✅ Ready")}\n" +
+            "1 → 'superkick' | 2 → 'call5enemy'";
         
-        GUI.Box(new Rect(10, 10, 300, 180), instructions, style);
+        GUI.Box(new Rect(10, 10, 350, 240), instructions, style);
     }
 }
