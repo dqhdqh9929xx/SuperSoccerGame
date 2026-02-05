@@ -1,0 +1,118 @@
+{
+  "description": "Example JSON messages for testing TikTok WebSocket integration",
+  "examples": {
+    "like_event": {
+      "description": "Like event từ TikTok viewer",
+      "example": {
+        "type": "like",
+        "userName": "NguyenVanA",
+        "likeCount": 1
+      },
+      "result": "Thêm 'NguyenVanA' vào mảng tap tim (100 tim → random winner)"
+    },
+    "rose_gift_event": {
+      "description": "Rose gift event - Trigger Super Kick + hiển thị tên",
+      "example": {
+        "type": "gift",
+        "userName": "TranThiB",
+        "giftName": "Rose",
+        "giftId": 5655
+      },
+      "result": "Trigger Super Kick ngay, hiển thị tên 'TranThiB' trên UI"
+    },
+    "perfume_gift_event": {
+      "description": "Perfume gift event - Trigger Call5Enemy (ẩn danh)",
+      "example": {
+        "type": "gift",
+        "userName": "LeVanC",
+        "giftName": "Perfume",
+        "giftId": 5658
+      },
+      "result": "Trigger Call5Enemy (spawn 5 AI), KHÔNG hiển thị tên"
+    }
+  },
+  "test_sequence": [
+    {
+      "step": 1,
+      "action": "Gửi 5 Like events",
+      "messages": [
+        {"type": "like", "userName": "User1"},
+        {"type": "like", "userName": "User2"},
+        {"type": "like", "userName": "User3"},
+        {"type": "like", "userName": "User4"},
+        {"type": "like", "userName": "User5"}
+      ],
+      "expected": "5 users được thêm vào mảng, đếm = 5/100"
+    },
+    {
+      "step": 2,
+      "action": "Gửi Rose Gift",
+      "messages": [
+        {"type": "gift", "userName": "RoseGiver123", "giftName": "Rose"}
+      ],
+      "expected": "Super Kick activated, tên 'RoseGiver123' hiển thị"
+    },
+    {
+      "step": 3,
+      "action": "Gửi Perfume Gift",
+      "messages": [
+        {"type": "gift", "userName": "PerfumeGiver456", "giftName": "Perfume"}
+      ],
+      "expected": "Call5Enemy triggered, KHÔNG hiển thị tên"
+    },
+    {
+      "step": 4,
+      "action": "Gửi 100 Like events để test random winner",
+      "messages": "Loop 100 times với random usernames",
+      "expected": "Random 1 trong 100 người, trigger Super Kick, hiển thị tên winner"
+    }
+  ],
+  "server_mock_code": {
+    "language": "javascript",
+    "code": [
+      "const WebSocket = require('ws');",
+      "const wss = new WebSocket.Server({ port: 8080 });",
+      "",
+      "wss.on('connection', (ws) => {",
+      "  console.log('Client connected');",
+      "  ",
+      "  // Test: Gửi Like",
+      "  ws.send(JSON.stringify({",
+      "    type: 'like',",
+      "    userName: 'TestUser1'",
+      "  }));",
+      "  ",
+      "  // Test: Gửi Rose Gift",
+      "  setTimeout(() => {",
+      "    ws.send(JSON.stringify({",
+      "      type: 'gift',",
+      "      userName: 'RoseGiver',",
+      "      giftName: 'Rose'",
+      "    }));",
+      "  }, 5000);",
+      "  ",
+      "  // Test: Gửi Perfume Gift",
+      "  setTimeout(() => {",
+      "    ws.send(JSON.stringify({",
+      "      type: 'gift',",
+      "      userName: 'PerfumeGiver',",
+      "      giftName: 'Perfume'",
+      "    }));",
+      "  }, 10000);",
+      "});"
+    ]
+  },
+  "curl_test_commands": {
+    "note": "Các command để test server (nếu server support REST API)",
+    "examples": [
+      "# Test Like event",
+      "curl -X POST http://localhost:8080/test -H 'Content-Type: application/json' -d '{\"type\":\"like\",\"userName\":\"TestUser\"}'",
+      "",
+      "# Test Rose Gift",
+      "curl -X POST http://localhost:8080/test -H 'Content-Type: application/json' -d '{\"type\":\"gift\",\"userName\":\"RoseGiver\",\"giftName\":\"Rose\"}'",
+      "",
+      "# Test Perfume Gift",
+      "curl -X POST http://localhost:8080/test -H 'Content-Type: application/json' -d '{\"type\":\"gift\",\"userName\":\"PerfumeGiver\",\"giftName\":\"Perfume\"}'"
+    ]
+  }
+}

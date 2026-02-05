@@ -1,0 +1,27 @@
+{
+  "name": "tiktok-unity-websocket-server",
+  "version": "1.0.0",
+  "description": "WebSocket server để kết nối TikTok Live với Unity game",
+  "main": "tiktok-server-example.js",
+  "scripts": {
+    "start": "node tiktok-server-example.js",
+    "test": "node test-websocket-server.js"
+  },
+  "keywords": [
+    "tiktok",
+    "websocket",
+    "unity",
+    "live",
+    "game"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.16.0",
+    "tiktok-live-connector": "^1.1.8"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

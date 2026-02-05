@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using TMPro;
+using FStudio.MatchEngine;
 
 /// <summary>
 /// Test script cho TiktokReceiver
@@ -18,6 +19,7 @@ public class TiktokReceiverTest : MonoBehaviour {
     
     [Header("References")]
     private TiktokReceiver receiver;
+    private TiktokHeartManager heartManager;
     
     [Header("UI")]
     [Tooltip("Hiện hướng dẫn trên màn hình")]
@@ -26,23 +28,43 @@ public class TiktokReceiverTest : MonoBehaviour {
     [Header("TikTok Heart Test")]
     [Tooltip("TextMeshProUGUI để hiển thị số heart từ TikTok viewer")]
     public TextMeshProUGUI textCountHeart;
+    public TextMeshProUGUI currentNameSuperKick;
     
-    [Tooltip("Số heart cần để trigger Super Kick")]
-    public int heartThreshold = 100;
-    
-    private int countHeart = 0;
+    // Danh sách 5 tên test
+    private string[] testUsers = new string[]
+    {
+        "User1_NguyenVanA",
+        "User2_TranThiB", 
+        "User3_LeVanC",
+        "User4_PhamThiD",
+        "User5_HoangVanE"
+    };
     
     void Start() {
         Debug.Log("[TiktokReceiverTest] ===== STARTING =====");
         
         receiver = FindObjectOfType<TiktokReceiver>();
+        heartManager = FindObjectOfType<TiktokHeartManager>();
         
         if (receiver == null) {
             Debug.LogError("[TiktokReceiverTest] ❌ TiktokReceiver NOT FOUND in scene!");
             Debug.LogError("[TiktokReceiverTest] Please create a GameObject with TiktokReceiver component!");
         } else {
             Debug.Log($"[TiktokReceiverTest] ✅ TiktokReceiver FOUND!");
-            Debug.Log($"[TiktokReceiverTest] ✅ Ready! Press {superKickKey} for Super Kick, {call5EnemyKey} for Call 5 Enemy");
+        }
+        
+        if (heartManager == null) {
+            Debug.LogError("[TiktokReceiverTest] ❌ TiktokHeartManager NOT FOUND in scene!");
+            Debug.LogError("[TiktokReceiverTest] Please create a GameObject with TiktokHeartManager component!");
+        } else {
+            Debug.Log($"[TiktokReceiverTest] ✅ TiktokHeartManager FOUND!");
+        }
+        
+        Debug.Log($"[TiktokReceiverTest] ✅ Ready! Press {superKickKey} for Super Kick, {call5EnemyKey} for Call 5 Enemy");
+        Debug.Log("[TiktokReceiverTest] Test users:");
+        for (int i = 0; i < testUsers.Length; i++)
+        {
+            Debug.Log($"  {i + 1}. {testUsers[i]}");
         }
     }
     
@@ -57,7 +79,14 @@ public class TiktokReceiverTest : MonoBehaviour {
             if (receiver != null) {
                 Debug.Log("[TiktokReceiverTest] ✅ TiktokReceiver found in Update!");
             }
-            return;
+        }
+        
+        // Check nếu heartManager null thì cố tìm lại
+        if (heartManager == null) {
+            heartManager = FindObjectOfType<TiktokHeartManager>();
+            if (heartManager != null) {
+                Debug.Log("[TiktokReceiverTest] ✅ TiktokHeartManager found in Update!");
+            }
         }
         
         // Test Super Kick (T key)
@@ -74,30 +103,66 @@ public class TiktokReceiverTest : MonoBehaviour {
             receiver.TriggerCall5Enemy();
         }
         
-        // Test TikTok Heart System (U key để simulate heart từ viewer)
+        // Test TikTok Heart System (U key để simulate heart từ random user)
         if (keyboard.uKey.wasPressedThisFrame) {
-            countHeart += 10;
-            Debug.Log($"[TiktokReceiverTest] 💖 Heart received! Count: {countHeart}/{heartThreshold}");
-            
-            // Cập nhật UI text nếu có
-            if (textCountHeart != null) {
-                textCountHeart.text = countHeart.ToString();
+            if (heartManager != null)
+            {
+                // Random chọn 1 trong 5 user
+                int randomUserIndex = Random.Range(0, testUsers.Length);
+                string selectedUser = testUsers[randomUserIndex];
+                
+                // Add heart tap
+                heartManager.AddHeartTap(selectedUser);
+                
+                Debug.Log($"[TiktokReceiverTest] 💖 KEY PRESSED: U → Random user: {selectedUser}");
+                
+                // Cập nhật UI text nếu có
+                if (textCountHeart != null) {
+                    textCountHeart.text = heartManager.GetCurrentHeartCount().ToString();
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[TiktokReceiverTest] HeartManager is null!");
             }
         }
         
-        // Khi đủ heart → Trigger Super Kick
-        if (countHeart >= heartThreshold) {
-            Debug.Log($"[TiktokReceiverTest] 🔥 Heart threshold reached! Triggering Super Kick!");
-            countHeart = 0;
+        // Cập nhật UI liên tục nếu có
+        if (textCountHeart != null && heartManager != null)
+        {
+            textCountHeart.text = heartManager.GetCurrentHeartCount().ToString();
+        }
+        
+        // Cập nhật tên winner từ HeartManager nếu có
+        if (currentNameSuperKick != null && heartManager != null)
+        {
+            string winnerName = heartManager.GetSelectedUserName();
+            if (!string.IsNullOrEmpty(winnerName))
+            {
+                currentNameSuperKick.text = winnerName;
+            }
+        }
+        
+        // Enable/Disable currentNameSuperKick dựa trên trạng thái Super Kick
+        if (currentNameSuperKick != null)
+        {
+            bool isSuperKickActive = false;
             
-            // Cập nhật UI
-            if (textCountHeart != null) {
-                textCountHeart.text = countHeart.ToString();
+            // Check Super Kick status từ MatchManager
+            if (MatchManager.Current != null)
+            {
+                isSuperKickActive = MatchManager.Current.IsSuperKick;
             }
             
-            receiver.TriggerSuperKick();
+            // Enable text khi Super Kick active, disable khi không
+            currentNameSuperKick.enabled = isSuperKickActive;
+            
+            // Clear tên khi Super Kick kết thúc
+            if (!isSuperKickActive && heartManager != null)
+            {
+                heartManager.ClearSelectedUserName();
+            }
         }
-
         
         // Test command string (1 key)
         if (keyboard.digit1Key.wasPressedThisFrame) {
@@ -123,17 +188,18 @@ public class TiktokReceiverTest : MonoBehaviour {
         style.alignment = TextAnchor.UpperLeft;
         style.normal.textColor = Color.white;
         
+        int currentCount = heartManager != null ? heartManager.GetCurrentHeartCount() : 0;
+        bool isSuperKickActive = heartManager != null ? heartManager.IsSuperKickActive() : false;
+        
         string instructions = 
             "=== TIKTOK RECEIVER TEST ===\n" +
             $"{superKickKey} → Super Kick\n" +
             $"{call5EnemyKey} → Call 5 Enemy\n" +
-            "U → Add Heart (test viewer)\n" +
-            $"    💖 Count: {countHeart}/{heartThreshold}\n" +
+            "U → Add Heart (random user)\n" +
+            $"    💖 Count: {currentCount}/100\n" +
+            $"    {(isSuperKickActive ? "⛔ SUPER KICK ACTIVE" : "✅ Tap enabled")}\n" +
             "1 → Command: 'superkick'\n" +
-            "2 → Command: 'call5enemy'\n" +
-            "\n" +
-            "Original keys (DISABLED):\n" +
-            "I → DISABLED";
+            "2 → Command: 'call5enemy'";
         
         GUI.Box(new Rect(10, 10, 300, 180), instructions, style);
     }
