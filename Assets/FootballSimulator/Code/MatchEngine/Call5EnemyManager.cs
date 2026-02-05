@@ -42,6 +42,26 @@ namespace FStudio.MatchEngine {
             }
         }
         
+        /// <summary>
+        /// Public method để trigger Call5Enemy từ bên ngoài (ví dụ: từ TikTok receiver)
+        /// </summary>
+        public void TriggerCall5Enemy() {
+            if (MatchManager.Current == null) {
+                Debug.LogWarning("[Call5Enemy] Cannot trigger - MatchManager is null");
+                return;
+            }
+            
+            var matchFlags = MatchManager.Current.MatchFlags;
+            
+            // Chỉ trigger khi đang Playing và không đang freeze
+            if (matchFlags.HasFlag(MatchStatus.Playing) && !isFreezing) {
+                countCall++;
+                Debug.Log($"[Call5Enemy] Triggered from external source. countCall = {countCall}");
+            } else {
+                Debug.LogWarning("[Call5Enemy] Cannot trigger - match is not in Playing state or is freezing");
+            }
+        }
+        
         void Update() {
             // Chỉ hoạt động khi đang trong trận và không đang freeze bởi tính năng này
             if (MatchManager.Current == null) return;
@@ -50,7 +70,7 @@ namespace FStudio.MatchEngine {
             
             // Chỉ xử lý input và timer khi đang Playing (không freeze)
             if (matchFlags.HasFlag(MatchStatus.Playing) && !isFreezing) {
-                HandleInput();
+                // HandleInput(); // DISABLED: Input được xử lý bởi TiktokReceiver
                 HandleCallTimer();
             }
             
@@ -60,13 +80,14 @@ namespace FStudio.MatchEngine {
             }
         }
         
-        private void HandleInput() {
-            // Bắt phím I (sử dụng Unity Input System)
-            if (Keyboard.current != null && Keyboard.current.iKey.wasPressedThisFrame) {
-                countCall++;
-                Debug.Log($"[Call5Enemy] Key I pressed. countCall = {countCall}");
-            }
-        }
+        // DISABLED: Input I được xử lý bởi TiktokReceiver thay vì trực tiếp
+        // private void HandleInput() {
+        //     // Bắt phím I (sử dụng Unity Input System)
+        //     if (Keyboard.current != null && Keyboard.current.iKey.wasPressedThisFrame) {
+        //         countCall++;
+        //         Debug.Log($"[Call5Enemy] Key I pressed. countCall = {countCall}");
+        //     }
+        // }
         
         private void HandleFreeze() {
             float elapsed = Time.time - freezeStartTime;

@@ -67,7 +67,7 @@ namespace FStudio.MatchEngine.Input {
             RegisterAction("Cross", CrossInput);
             RegisterAction("ChangeTacticHigh", ChangeTacticHighInput);
             RegisterAction("ChangeTacticLow", ChangeTacticLowInput);
-            RegisterAction("SuperKick", SuperKickInput);
+            // RegisterAction("SuperKick", SuperKickInput); // DISABLED: Input U được xử lý bởi TiktokReceiver
             //
 
             Debug.Log("Team Input Listener Created.");
@@ -87,15 +87,16 @@ namespace FStudio.MatchEngine.Input {
             return true;
         }
 
-        private bool SuperKickInput(InputAction.CallbackContext ctx) {
-            if (MatchPause.IsPaused) {
-                return false;
-            }
-            if (MatchManager.Current != null && MatchManager.Current.MatchFlags.HasFlag(MatchStatus.Playing)) {
-                MatchManager.Current.SetSuperKick(true);
-            }
-            return true;
-        }
+        // DISABLED: Input U được xử lý bởi TiktokReceiver thay vì trực tiếp
+        // private bool SuperKickInput(InputAction.CallbackContext ctx) {
+        //     if (MatchPause.IsPaused) {
+        //         return false;
+        //     }
+        //     if (MatchManager.Current != null && MatchManager.Current.MatchFlags.HasFlag(MatchStatus.Playing)) {
+        //         MatchManager.Current.SetSuperKick(true);
+        //     }
+        //     return true;
+        // }
 
         private void UpdateTactic(bool increase) {
             var currentTactic = (int)MatchManager.Current.UserTeam.Team.TacticPresetType;

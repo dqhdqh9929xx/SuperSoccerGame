@@ -350,7 +350,8 @@ namespace FStudio.MatchEngine {
                 UpdateMarkings(opponents);
             }
 
-            for (int i=0; i < 11; i++) {
+            // Xử lý tất cả cầu thủ bao gồm cả cầu thủ spawn động (Call5Enemy)
+            for (int i=0; i < GamePlayers.Length; i++) {
                 if (GamePlayers[i] != null) {
 
                     var isInputControlled = IsPlayerInputControlled(GamePlayers[i]);
