@@ -276,9 +276,9 @@ public class TiktokReceiverTest : MonoBehaviour {
             "R → Rose Gift x1 (queue)\n" +
             "O → Rose Gift x5 COMBO\n" +
             "P → Perfume Gift (Call5Enemy)\n" +
-            $"    💖 Hearts: {currentCount}/100\n" +
+            $"    💖 Hearts: {currentCount}/100 (always active)\n" +
             $"    📋 Queue: {queueCount} waiting\n" +
-            $"    {(isSuperKickActive ? "⛔ SUPER KICK ACTIVE" : "✅ Ready")}\n" +
+            $"    {(isSuperKickActive ? "⚡ SUPER KICK ACTIVE" : "✅ Idle")}\n" +
             "1 → 'superkick' | 2 → 'call5enemy'";
         
         GUI.Box(new Rect(10, 10, 350, 240), instructions, style);

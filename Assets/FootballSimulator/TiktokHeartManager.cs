@@ -79,13 +79,13 @@ public class TiktokHeartManager : MonoBehaviour
         {
             bool superKickStatus = MatchManager.Current.IsSuperKick;
             
-            // Nếu Super Kick vừa tắt, cho phép tap lại
+            // Nếu Super Kick vừa tắt
             if (isSuperKickActive && !superKickStatus)
             {
                 isSuperKickActive = false;
                 if (showDebugLogs)
                 {
-                    Debug.Log("[TiktokHeartManager] ✅ Super Kick ended. Heart tapping enabled.");
+                    Debug.Log("[TiktokHeartManager] ✅ Super Kick ended.");
                 }
                 
                 // Clear tên hiện tại
@@ -101,13 +101,13 @@ public class TiktokHeartManager : MonoBehaviour
                     }
                 }
             }
-            // Nếu Super Kick vừa bật, block tap
+            // Nếu Super Kick vừa bật
             else if (!isSuperKickActive && superKickStatus)
             {
                 isSuperKickActive = true;
                 if (showDebugLogs)
                 {
-                    Debug.Log("[TiktokHeartManager] ⛔ Super Kick active. Heart tapping disabled.");
+                    Debug.Log("[TiktokHeartManager] ⚡ Super Kick active! (Hearts still accumulate in background)");
                 }
             }
         }
@@ -139,21 +139,12 @@ public class TiktokHeartManager : MonoBehaviour
     
     /// <summary>
     /// Thêm một heart tap từ người dùng
+    /// KHÔNG block khi Super Kick active - luôn cho tap và tích lũy vào queue
     /// </summary>
     /// <param name="userName">Tên người tap</param>
     public void AddHeartTap(string userName)
     {
-        // Nếu Super Kick đang active, không cho tap
-        if (isSuperKickActive)
-        {
-            if (showDebugLogs)
-            {
-                Debug.Log($"[TiktokHeartManager] ⛔ Heart tap from {userName} BLOCKED - Super Kick is active!");
-            }
-            return;
-        }
-        
-        // Thêm tên vào mảng
+        // Thêm tên vào mảng (không check isSuperKickActive - luôn cho tap)
         heartTappers[currentIndex] = userName;
         currentIndex++;
         
@@ -162,7 +153,7 @@ public class TiktokHeartManager : MonoBehaviour
             Debug.Log($"[TiktokHeartManager] 💖 Heart tap from {userName}! Count: {currentIndex}/{heartThreshold}");
         }
         
-        // Kiểm tra xem đã đủ 100 chưa
+        // Kiểm tra xem đã đủ 100 chưa → Add vào queue và reset
         if (currentIndex >= heartThreshold)
         {
             TriggerSuperKickForRandomUser();

@@ -4434,8 +4434,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d60694f234c193643a504ff94facd5d9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  heartThreshold: 10
+  heartThreshold: 100
+  superKickDelay: 3
   showDebugLogs: 1
+  queueCount: 0
+  currentCountdown: 0
+  isWaitingForNextKick: 0
+  ListViewerTiktokSuperKick: []
 --- !u!114 &509215806
 MonoBehaviour:
   m_ObjectHideFlags: 0

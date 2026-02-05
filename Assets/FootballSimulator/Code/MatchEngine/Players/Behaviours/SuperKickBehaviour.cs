@@ -13,7 +13,15 @@ namespace FStudio.MatchEngine.Players.Behaviours {
     /// </summary>
     public class SuperKickBehaviour : AbstractShootingBehaviour {
         private const float SUPER_KICK_POWER_MULTIPLIER = 1.5f;
-        private const float SUPER_KICK_HEIGHT_MULTIPLIER = 0.7f; // Điều chỉnh độ cao của cú sút (1.0 = giữ nguyên, < 1.0 = thấp hơn, > 1.0 = cao hơn)
+        
+        // Random height system - 3 cases
+        private float currentHeightMultiplier = 0.7f;
+        private readonly float[] heightVariants = new float[] { 
+            0.7f,  // Case 1: LOW - Bóng bay thấp (ground shot)
+            0.85f,  // Case 2: MID - Bóng bay trung bình
+            1.05f   // Case 3: HIGH - Bóng bay cao (lob shot)
+        };
+        
         private const float MIN_Z_DISTANCE_SQR_TO_ANGLE_CHECK = 4f;
         private const float MAX_X_DISTANCE_SQR_TO_ANGLE_CHECK = 6f;
         private const float MAX_ANGLE = 80f;
@@ -56,6 +64,14 @@ namespace FStudio.MatchEngine.Players.Behaviours {
                 var shootVector = homeGoal.GetShootingVector(Player, opponents);
                 if (shootVector.shootPoint == null) return false;
 
+                // Random chọn 1 trong 3 độ cao
+                int randomIndex = Random.Range(0, heightVariants.Length);
+                currentHeightMultiplier = heightVariants[randomIndex];
+                
+                string heightType = randomIndex == 0 ? "LOW (0.7f)" : 
+                                  randomIndex == 1 ? "MID (0.9f)" : "HIGH (1.2f)";
+                Debug.Log($"[SuperKick] Height variant selected: {heightType}");
+
                 shootingTarget = shootVector;
                 shootingDir = shootVector.shootPoint.position - Player.Position;
                 isAlreadyActive = true;
@@ -71,10 +87,10 @@ namespace FStudio.MatchEngine.Players.Behaviours {
                     var shootPowerByAngleFree = EngineOptions_ShootingSettings.Current.shootPowerModByAngleFree.Evaluate(st.angleFree);
                     var baseTarget = homeGoal.GetShootingVectorFromPoint(Player, st.shootPoint) * shootPowerByAngleFree;
                     
-                    // Apply multipliers: horizontal (X, Z) gets SUPER_KICK_POWER_MULTIPLIER, height (Y) gets SUPER_KICK_HEIGHT_MULTIPLIER
+                    // Apply multipliers: horizontal (X, Z) gets SUPER_KICK_POWER_MULTIPLIER, height (Y) gets random height
                     var target = new Vector3(
                         baseTarget.x * SUPER_KICK_POWER_MULTIPLIER,
-                        baseTarget.y * SUPER_KICK_HEIGHT_MULTIPLIER,
+                        baseTarget.y * currentHeightMultiplier,
                         baseTarget.z * SUPER_KICK_POWER_MULTIPLIER
                     );
                     
