@@ -12,7 +12,13 @@ namespace FStudio.MatchEngine.Players.Behaviours {
     /// Mode is cleared when ball goes out of play (OutEvent or ShootWentOutEvent).
     /// </summary>
     public class SuperKickBehaviour : AbstractShootingBehaviour {
-        private const float SUPER_KICK_POWER_MULTIPLIER = 1.5f;
+        // Random power system - 3 cases
+        private float currentPowerMultiplier = 1.5f;
+        private readonly float[] powerVariants = new float[] { 
+            0.8f,  // Case 1: WEAK - Sút yếu hơn
+            1.5f,  // Case 2: NORMAL - Sút bình thường  
+            1.8f   // Case 3: STRONG - Sút mạnh nhất
+        };
         
         // Random height system - 3 cases
         private float currentHeightMultiplier = 0.7f;
@@ -65,12 +71,19 @@ namespace FStudio.MatchEngine.Players.Behaviours {
                 if (shootVector.shootPoint == null) return false;
 
                 // Random chọn 1 trong 3 độ cao
-                int randomIndex = Random.Range(0, heightVariants.Length);
-                currentHeightMultiplier = heightVariants[randomIndex];
+                int randomHeightIndex = Random.Range(0, heightVariants.Length);
+                currentHeightMultiplier = heightVariants[randomHeightIndex];
                 
-                string heightType = randomIndex == 0 ? "LOW (0.7f)" : 
-                                  randomIndex == 1 ? "MID (0.9f)" : "HIGH (1.2f)";
-                Debug.Log($"[SuperKick] Height variant selected: {heightType}");
+                // Random chọn 1 trong 3 lực sút
+                int randomPowerIndex = Random.Range(0, powerVariants.Length);
+                currentPowerMultiplier = powerVariants[randomPowerIndex];
+                
+                string heightType = randomHeightIndex == 0 ? "LOW (0.7f)" : 
+                                  randomHeightIndex == 1 ? "MID (0.85f)" : "HIGH (1.05f)";
+                string powerType = randomPowerIndex == 0 ? "WEAK (0.8f)" :
+                                  randomPowerIndex == 1 ? "NORMAL (1.5f)" : "STRONG (1.8f)";
+                
+                Debug.Log($"[SuperKick] Height: {heightType}, Power: {powerType}");
 
                 shootingTarget = shootVector;
                 shootingDir = shootVector.shootPoint.position - Player.Position;
@@ -87,11 +100,11 @@ namespace FStudio.MatchEngine.Players.Behaviours {
                     var shootPowerByAngleFree = EngineOptions_ShootingSettings.Current.shootPowerModByAngleFree.Evaluate(st.angleFree);
                     var baseTarget = homeGoal.GetShootingVectorFromPoint(Player, st.shootPoint) * shootPowerByAngleFree;
                     
-                    // Apply multipliers: horizontal (X, Z) gets SUPER_KICK_POWER_MULTIPLIER, height (Y) gets random height
+                    // Apply multipliers: horizontal (X, Z) gets random power multiplier, height (Y) gets random height
                     var target = new Vector3(
-                        baseTarget.x * SUPER_KICK_POWER_MULTIPLIER,
+                        baseTarget.x * currentPowerMultiplier,
                         baseTarget.y * currentHeightMultiplier,
-                        baseTarget.z * SUPER_KICK_POWER_MULTIPLIER
+                        baseTarget.z * currentPowerMultiplier
                     );
                     
                     Player.Shoot(target);
