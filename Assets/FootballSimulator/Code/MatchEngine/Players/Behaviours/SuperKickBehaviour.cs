@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Linq;
 using FStudio.MatchEngine.Enums;
 using FStudio.MatchEngine.EngineOptions;
+using FStudio.MatchEngine.Balls;
 
 namespace FStudio.MatchEngine.Players.Behaviours {
     /// <summary>
@@ -10,28 +11,28 @@ namespace FStudio.MatchEngine.Players.Behaviours {
     /// Case 2: if ball is free, the first player to touch (hold) the ball will shoot at Home goal.
     /// Target goal is always Home (goal with smallest position.z).
     /// Mode is cleared when ball goes out of play (OutEvent or ShootWentOutEvent).
+    /// 
+    /// Random power/height với bước nhảy 0.1f (nhiều case hơn 3 case cũ).
+    /// Clone balls được spawn bởi BallPowerVisualController khi bóng đã bay và biến đổi power.
     /// </summary>
     public class SuperKickBehaviour : AbstractShootingBehaviour {
-        // Random power system - 3 cases
-        private float currentPowerMultiplier = 1.5f;
-        private readonly float[] powerVariants = new float[] { 
-            0.8f,  // Case 1: WEAK - Sút yếu hơn
-            1.5f,  // Case 2: NORMAL - Sút bình thường  
-            1.8f   // Case 3: STRONG - Sút mạnh nhất
-        };
+        // Random power range (bước nhảy 0.1f)
+        private const float POWER_MIN = 0.5f;
+        private const float POWER_MAX = 2.0f;
         
-        // Random height system - 3 cases
+        // Random height range (bước nhảy 0.1f)
+        private const float HEIGHT_MIN = 0.3f;
+        private const float HEIGHT_MAX = 1.5f;
+        
+        // Bước nhảy random
+        private const float RANDOM_STEP = 0.1f;
+        
+        private float currentPowerMultiplier = 1.5f;
         private float currentHeightMultiplier = 0.7f;
-        private readonly float[] heightVariants = new float[] { 
-            0.7f,  // Case 1: LOW - Bóng bay thấp (ground shot)
-            0.85f,  // Case 2: MID - Bóng bay trung bình
-            1.05f   // Case 3: HIGH - Bóng bay cao (lob shot)
-        };
         
         private const float MIN_Z_DISTANCE_SQR_TO_ANGLE_CHECK = 4f;
         private const float MAX_X_DISTANCE_SQR_TO_ANGLE_CHECK = 6f;
         private const float MAX_ANGLE = 80f;
-
 
         private (Transform shootPoint, float angleFree)? shootingTarget;
         private Vector3 shootingDir;
@@ -52,6 +53,16 @@ namespace FStudio.MatchEngine.Players.Behaviours {
             return true;
         }
 
+        /// <summary>
+        /// Random một giá trị trong khoảng [min, max] với bước nhảy step.
+        /// Ví dụ: RandomWithStep(0.5f, 2.0f, 0.1f) → 0.5, 0.6, 0.7, ..., 1.9, 2.0
+        /// </summary>
+        private float RandomWithStep(float min, float max, float step) {
+            int steps = Mathf.RoundToInt((max - min) / step);
+            int randomStep = Random.Range(0, steps + 1);
+            return min + randomStep * step;
+        }
+
         public override bool Behave(bool isAlreadyActive) {
             if (MatchManager.Current == null || !MatchManager.Current.IsSuperKick)
                 return false;
@@ -70,20 +81,11 @@ namespace FStudio.MatchEngine.Players.Behaviours {
                 var shootVector = homeGoal.GetShootingVector(Player, opponents);
                 if (shootVector.shootPoint == null) return false;
 
-                // Random chọn 1 trong 3 độ cao
-                int randomHeightIndex = Random.Range(0, heightVariants.Length);
-                currentHeightMultiplier = heightVariants[randomHeightIndex];
+                // Random power và height với bước nhảy 0.1f
+                currentPowerMultiplier = RandomWithStep(POWER_MIN, POWER_MAX, RANDOM_STEP);
+                currentHeightMultiplier = RandomWithStep(HEIGHT_MIN, HEIGHT_MAX, RANDOM_STEP);
                 
-                // Random chọn 1 trong 3 lực sút
-                int randomPowerIndex = Random.Range(0, powerVariants.Length);
-                currentPowerMultiplier = powerVariants[randomPowerIndex];
-                
-                string heightType = randomHeightIndex == 0 ? "LOW (0.7f)" : 
-                                  randomHeightIndex == 1 ? "MID (0.85f)" : "HIGH (1.05f)";
-                string powerType = randomPowerIndex == 0 ? "WEAK (0.8f)" :
-                                  randomPowerIndex == 1 ? "NORMAL (1.5f)" : "STRONG (1.8f)";
-                
-                Debug.Log($"[SuperKick] Height: {heightType}, Power: {powerType}");
+                Debug.Log($"[SuperKick] Main ball - Power: {currentPowerMultiplier:F1}, Height: {currentHeightMultiplier:F1}");
 
                 shootingTarget = shootVector;
                 shootingDir = shootVector.shootPoint.position - Player.Position;
@@ -100,14 +102,21 @@ namespace FStudio.MatchEngine.Players.Behaviours {
                     var shootPowerByAngleFree = EngineOptions_ShootingSettings.Current.shootPowerModByAngleFree.Evaluate(st.angleFree);
                     var baseTarget = homeGoal.GetShootingVectorFromPoint(Player, st.shootPoint) * shootPowerByAngleFree;
                     
-                    // Apply multipliers: horizontal (X, Z) gets random power multiplier, height (Y) gets random height
-                    var target = new Vector3(
+                    // Quả bóng chính: áp dụng random multiplier đã chọn
+                    var mainTarget = new Vector3(
                         baseTarget.x * currentPowerMultiplier,
                         baseTarget.y * currentHeightMultiplier,
                         baseTarget.z * currentPowerMultiplier
                     );
                     
-                    Player.Shoot(target);
+                    // Sút quả bóng chính
+                    // Clone balls sẽ được BallPowerVisualController spawn khi bóng biến đổi power
+                    Player.Shoot(mainTarget);
+                    
+                    int comboCount = MatchManager.Current.SuperKickComboCount;
+                    if (comboCount > 1) {
+                        Debug.Log($"[SuperKick] COMBO x{comboCount}! Clone balls will spawn when ball transforms to power mode.");
+                    }
                 }
                 return true;
             }

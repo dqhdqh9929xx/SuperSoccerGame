@@ -133,6 +133,12 @@ namespace FStudio.MatchEngine {
         public bool IsSuperKick { get; private set; }
 
         /// <summary>
+        /// Số quả bóng nhân bản khi Super Kick (combo count).
+        /// 1 = sút bình thường, 3 = sút ra 3 quả bóng cùng lúc, v.v.
+        /// </summary>
+        public int SuperKickComboCount { get; private set; } = 1;
+
+        /// <summary>
         /// Goal net with smallest position.z (Home team goal). Used as Super Kick target.
         /// </summary>
         public GoalNet HomeGoalNet => goalNet1.Position.z <= goalNet2.Position.z ? goalNet1 : goalNet2;
@@ -163,15 +169,16 @@ namespace FStudio.MatchEngine {
             }
         }
 
-        public void SetSuperKick(bool value) {
+        public void SetSuperKick(bool value, int comboCount = 1) {
             IsSuperKick = value;
+            SuperKickComboCount = value ? Mathf.Max(1, comboCount) : 1;
             
             // Điều chỉnh ánh sáng
             if (directionalLight != null) {
                 if (value) {
                     // Kích hoạt super_kick: làm tối
                     StartCoroutine(TransitionLightIntensity(SUPER_KICK_LIGHT_INTENSITY));
-                    Debug.Log("[MatchManager] Super Kick activated - dimming light");
+                    Debug.Log($"[MatchManager] Super Kick activated - dimming light (combo x{SuperKickComboCount} balls)");
                 } else {
                     // Kết thúc super_kick: sáng lại bình thường
                     StartCoroutine(TransitionLightIntensity(NORMAL_LIGHT_INTENSITY));

@@ -5,12 +5,13 @@ using FStudio.MatchEngine;
 
 /// <summary>
 /// Test script cho TiktokReceiver
-/// Bấm phím T → Trigger Super Kick (direct)
+/// Bấm phím T → Trigger Super Kick x1 (direct, 1 quả)
 /// Bấm phím Y → Trigger Call 5 Enemy
 /// Bấm phím U → Add Heart (test TikTok viewer)
-/// Bấm phím R → Rose Gift x1 (queue)
-/// Bấm phím O → Rose Gift x5 Combo
+/// Bấm phím R → Rose Gift x1 (queue, 1 quả)
+/// Bấm phím O → Rose Gift x5 Combo (queue, sút ra 5 quả bóng cùng lúc)
 /// Bấm phím P → Perfume Gift
+/// Bấm phím G → Rose Gift x3 Combo (queue, sút ra 3 quả bóng cùng lúc)
 /// </summary>
 public class TiktokReceiverTest : MonoBehaviour {
     [Header("Test Keys")]
@@ -165,7 +166,7 @@ public class TiktokReceiverTest : MonoBehaviour {
             }
         }
         
-        // Test Rose Gift x5 Combo (O key)
+        // Test Rose Gift x5 Combo (O key) → sút ra 5 quả bóng cùng lúc
         if (keyboard.oKey.wasPressedThisFrame) {
             if (wsClient != null)
             {
@@ -173,10 +174,29 @@ public class TiktokReceiverTest : MonoBehaviour {
                 int randomUserIndex = Random.Range(0, testUsers.Length);
                 string selectedUser = testUsers[randomUserIndex];
                 
-                // Simulate Rose Gift x5 (combo)
+                // Simulate Rose Gift x5 (combo) → 1 entry trong queue, sút ra 5 quả
                 wsClient.SimulateRoseGift(selectedUser, 5);
                 
-                Debug.Log($"[TiktokReceiverTest] 🌹🌹🌹🌹🌹 KEY PRESSED: O → Rose Gift x5 COMBO from {selectedUser}");
+                Debug.Log($"[TiktokReceiverTest] 🌹x5 KEY PRESSED: O → Rose Gift x5 COMBO from {selectedUser} (will shoot 5 balls at once!)");
+            }
+            else
+            {
+                Debug.LogWarning("[TiktokReceiverTest] WebSocketClient is null!");
+            }
+        }
+        
+        // Test Rose Gift x3 Combo (G key) → sút ra 3 quả bóng cùng lúc
+        if (keyboard.gKey.wasPressedThisFrame) {
+            if (wsClient != null)
+            {
+                // Random chọn 1 trong 5 user
+                int randomUserIndex = Random.Range(0, testUsers.Length);
+                string selectedUser = testUsers[randomUserIndex];
+                
+                // Simulate Rose Gift x3 (combo) → 1 entry trong queue, sút ra 3 quả
+                wsClient.SimulateRoseGift(selectedUser, 3);
+                
+                Debug.Log($"[TiktokReceiverTest] 🌹x3 KEY PRESSED: G → Rose Gift x3 COMBO from {selectedUser} (will shoot 3 balls at once!)");
             }
             else
             {
@@ -270,14 +290,15 @@ public class TiktokReceiverTest : MonoBehaviour {
         
         string instructions = 
             "=== TIKTOK RECEIVER TEST ===\n" +
-            $"{superKickKey} → Super Kick (direct)\n" +
+            $"{superKickKey} → Super Kick x1 (direct)\n" +
             $"{call5EnemyKey} → Call 5 Enemy\n" +
             "U → Add Heart (random user)\n" +
-            "R → Rose Gift x1 (queue)\n" +
-            "O → Rose Gift x5 COMBO\n" +
+            "R → Rose Gift x1 (1 ball)\n" +
+            "G → Rose Gift x3 COMBO (3 balls)\n" +
+            "O → Rose Gift x5 COMBO (5 balls)\n" +
             "P → Perfume Gift (Call5Enemy)\n" +
             $"    💖 Hearts: {currentCount}/100 (always active)\n" +
-            $"    📋 Queue: {queueCount} waiting\n" +
+            $"    📋 Queue: {queueCount} entry waiting\n" +
             $"    {(isSuperKickActive ? "⚡ SUPER KICK ACTIVE" : "✅ Idle")}\n" +
             "1 → 'superkick' | 2 → 'call5enemy'";
         

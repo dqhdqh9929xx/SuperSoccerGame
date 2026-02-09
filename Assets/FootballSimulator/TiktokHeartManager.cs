@@ -4,10 +4,28 @@ using UnityEngine;
 using FStudio.MatchEngine;
 
 /// <summary>
+/// Cấu trúc lưu thông tin Super Kick entry trong queue
+/// Mỗi entry chỉ chiếm 1 slot, comboCount quyết định số quả bóng nhân bản khi sút
+/// </summary>
+[System.Serializable]
+public struct SuperKickEntry
+{
+    public string userName;
+    public int comboCount; // Số quả bóng sẽ nhân bản khi sút (1 = bình thường, 3 = 3 quả, ...)
+    
+    public SuperKickEntry(string userName, int comboCount = 1)
+    {
+        this.userName = userName;
+        this.comboCount = Mathf.Max(1, comboCount);
+    }
+}
+
+/// <summary>
 /// Quản lý hệ thống tap tim từ TikTok
 /// - Thu thập 100 taps từ viewers
 /// - Random chọn 1 người để trigger Super Kick
 /// - Quản lý hàng đợi Super Kick (queue system)
+/// - Combo gift: chỉ thêm 1 entry vào queue, nhân bản bóng khi sút
 /// </summary>
 public class TiktokHeartManager : MonoBehaviour
 {
@@ -39,8 +57,8 @@ public class TiktokHeartManager : MonoBehaviour
     private string selectedUserName = "";
     
     // ===== QUEUE SYSTEM =====
-    // Danh sách user đang chờ trigger Super Kick
-    public List<string> ListViewerTiktokSuperKick = new List<string>();
+    // Danh sách user đang chờ trigger Super Kick (mỗi entry chứa userName + comboCount)
+    public List<SuperKickEntry> ListViewerTiktokSuperKick = new List<SuperKickEntry>();
     
     // Countdown timer
     private float countdown = 0f;
@@ -188,9 +206,11 @@ public class TiktokHeartManager : MonoBehaviour
     
     /// <summary>
     /// Thêm user vào hàng đợi Super Kick
+    /// Chỉ thêm 1 entry duy nhất, comboCount quyết định số quả bóng nhân bản khi sút
+    /// Ví dụ: combo 3 Rose → 1 entry với comboCount=3 → sút ra 3 quả bóng cùng lúc
     /// </summary>
     /// <param name="userName">Tên user</param>
-    /// <param name="count">Số lần add (cho combo Rose)</param>
+    /// <param name="count">Số quả bóng nhân bản khi sút (combo count)</param>
     public void AddToSuperKickQueue(string userName, int count = 1)
     {
         if (string.IsNullOrEmpty(userName))
@@ -199,27 +219,38 @@ public class TiktokHeartManager : MonoBehaviour
             return;
         }
         
-        // Add vào queue theo số lần count
-        for (int i = 0; i < count; i++)
-        {
-            ListViewerTiktokSuperKick.Add(userName);
-        }
+        // Kiểm tra xem có thể xử lý ngay không (queue trống và super kick không active)
+        bool canProcessImmediately = !isSuperKickActive && ListViewerTiktokSuperKick.Count == 0 && countdown <= 0;
+        
+        // Chỉ thêm 1 entry duy nhất vào queue, lưu comboCount để nhân bản bóng khi sút
+        ListViewerTiktokSuperKick.Add(new SuperKickEntry(userName, count));
         
         if (showDebugLogs)
         {
             if (count > 1)
             {
-                Debug.Log($"[TiktokHeartManager] ➕ Added {userName} x{count} to Super Kick queue! Total in queue: {ListViewerTiktokSuperKick.Count}");
+                Debug.Log($"[TiktokHeartManager] ➕ Added {userName} (combo x{count} balls) to Super Kick queue! Total entries in queue: {ListViewerTiktokSuperKick.Count}");
             }
             else
             {
-                Debug.Log($"[TiktokHeartManager] ➕ Added {userName} to Super Kick queue! Total in queue: {ListViewerTiktokSuperKick.Count}");
+                Debug.Log($"[TiktokHeartManager] ➕ Added {userName} to Super Kick queue! Total entries in queue: {ListViewerTiktokSuperKick.Count}");
             }
+        }
+        
+        // Nếu không có gì đang chạy, xử lý ngay lập tức (không chờ countdown)
+        if (canProcessImmediately)
+        {
+            if (showDebugLogs)
+            {
+                Debug.Log($"[TiktokHeartManager] ⚡ Queue was empty, processing immediately!");
+            }
+            ProcessNextSuperKick();
         }
     }
     
     /// <summary>
     /// Process Super Kick cho user đầu tiên trong queue
+    /// Truyền comboCount xuống để nhân bản bóng khi sút
     /// </summary>
     private void ProcessNextSuperKick()
     {
@@ -232,23 +263,23 @@ public class TiktokHeartManager : MonoBehaviour
             return;
         }
         
-        // Lấy user đầu tiên
-        string userName = ListViewerTiktokSuperKick[0];
+        // Lấy entry đầu tiên (chứa userName + comboCount)
+        SuperKickEntry entry = ListViewerTiktokSuperKick[0];
         ListViewerTiktokSuperKick.RemoveAt(0);
         
         // Set tên hiện tại
-        selectedUserName = userName;
+        selectedUserName = entry.userName;
         
         if (showDebugLogs)
         {
-            Debug.Log($"[TiktokHeartManager] ⚡ Processing Super Kick for: {userName}");
+            Debug.Log($"[TiktokHeartManager] ⚡ Processing Super Kick for: {entry.userName} (combo x{entry.comboCount} balls)");
             Debug.Log($"[TiktokHeartManager] Remaining in queue: {ListViewerTiktokSuperKick.Count}");
         }
         
-        // Trigger Super Kick
+        // Trigger Super Kick với combo count
         if (tiktokReceiver != null)
         {
-            tiktokReceiver.TriggerSuperKick();
+            tiktokReceiver.TriggerSuperKick(entry.comboCount);
         }
         else
         {

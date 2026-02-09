@@ -43,9 +43,10 @@ public class TiktokReceiver : MonoBehaviour
     /// Trigger Super Kick feature (phím U)
     /// Cú sút siêu mạnh về phía khung thành Home
     /// </summary>
-    public void OnSuperKickEvent() {
+    /// <param name="comboCount">Số quả bóng nhân bản khi sút (1 = bình thường)</param>
+    public void OnSuperKickEvent(int comboCount = 1) {
         if (showDebugLogs) {
-            Debug.Log("[TiktokReceiver] Received SuperKick event from TikTok");
+            Debug.Log($"[TiktokReceiver] Received SuperKick event from TikTok (combo x{comboCount})");
         }
         
         if (MatchManager.Current == null) {
@@ -53,10 +54,10 @@ public class TiktokReceiver : MonoBehaviour
             return;
         }
         
-        MatchManager.Current.SetSuperKick(true);
+        MatchManager.Current.SetSuperKick(true, comboCount);
         
         if (showDebugLogs) {
-            Debug.Log("[TiktokReceiver] SuperKick activated!");
+            Debug.Log($"[TiktokReceiver] SuperKick activated! Combo: {comboCount} balls");
         }
     }
     
@@ -87,8 +88,9 @@ public class TiktokReceiver : MonoBehaviour
     /// <summary>
     /// Alias cho OnSuperKickEvent (để dễ gọi từ UI Button hoặc UnityEvent)
     /// </summary>
-    public void TriggerSuperKick() {
-        OnSuperKickEvent();
+    /// <param name="comboCount">Số quả bóng nhân bản khi sút (1 = bình thường)</param>
+    public void TriggerSuperKick(int comboCount = 1) {
+        OnSuperKickEvent(comboCount);
     }
     
     /// <summary>
