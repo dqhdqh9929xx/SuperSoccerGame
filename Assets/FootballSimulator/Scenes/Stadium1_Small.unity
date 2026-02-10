@@ -4409,6 +4409,7 @@ MonoBehaviour:
   showOnScreenInstructions: 1
   textCountHeart: {fileID: 211159847}
   currentNameSuperKick: {fileID: 1927452346}
+  comboBallsO: 15
 --- !u!114 &509215804
 MonoBehaviour:
   m_ObjectHideFlags: 0

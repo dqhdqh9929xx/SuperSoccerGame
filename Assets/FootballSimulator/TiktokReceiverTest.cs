@@ -9,9 +9,8 @@ using FStudio.MatchEngine;
 /// Bấm phím Y → Trigger Call 5 Enemy
 /// Bấm phím U → Add Heart (test TikTok viewer)
 /// Bấm phím R → Rose Gift x1 (queue, 1 quả)
-/// Bấm phím O → Rose Gift x5 Combo (queue, sút ra 5 quả bóng cùng lúc)
+/// Bấm phím O → Rose Gift Combo (số bóng tùy chỉnh trong inspector)
 /// Bấm phím P → Perfume Gift
-/// Bấm phím G → Rose Gift x3 Combo (queue, sút ra 3 quả bóng cùng lúc)
 /// </summary>
 public class TiktokReceiverTest : MonoBehaviour {
     [Header("Test Keys")]
@@ -34,6 +33,11 @@ public class TiktokReceiverTest : MonoBehaviour {
     [Tooltip("TextMeshProUGUI để hiển thị số heart từ TikTok viewer")]
     public TextMeshProUGUI textCountHeart;
     public TextMeshProUGUI currentNameSuperKick;
+
+    [Header("Combo Test Settings")]
+    [Tooltip("Số bóng sẽ được sút ra khi bấm phím O (Rose Gift combo cho O)")]
+    [Range(1, 20)]
+    public int comboBallsO = 5;
     
     // Danh sách 5 tên test
     private string[] testUsers = new string[]
@@ -166,7 +170,7 @@ public class TiktokReceiverTest : MonoBehaviour {
             }
         }
         
-        // Test Rose Gift x5 Combo (O key) → sút ra 5 quả bóng cùng lúc
+        // Test Rose Gift Combo (O key) → số bóng tùy chỉnh qua comboBallsO
         if (keyboard.oKey.wasPressedThisFrame) {
             if (wsClient != null)
             {
@@ -174,29 +178,12 @@ public class TiktokReceiverTest : MonoBehaviour {
                 int randomUserIndex = Random.Range(0, testUsers.Length);
                 string selectedUser = testUsers[randomUserIndex];
                 
-                // Simulate Rose Gift x5 (combo) → 1 entry trong queue, sút ra 5 quả
-                wsClient.SimulateRoseGift(selectedUser, 5);
+                int comboCount = Mathf.Max(1, comboBallsO);
                 
-                Debug.Log($"[TiktokReceiverTest] 🌹x5 KEY PRESSED: O → Rose Gift x5 COMBO from {selectedUser} (will shoot 5 balls at once!)");
-            }
-            else
-            {
-                Debug.LogWarning("[TiktokReceiverTest] WebSocketClient is null!");
-            }
-        }
-        
-        // Test Rose Gift x3 Combo (G key) → sút ra 3 quả bóng cùng lúc
-        if (keyboard.gKey.wasPressedThisFrame) {
-            if (wsClient != null)
-            {
-                // Random chọn 1 trong 5 user
-                int randomUserIndex = Random.Range(0, testUsers.Length);
-                string selectedUser = testUsers[randomUserIndex];
+                // Simulate Rose Gift combo (O) → 1 entry trong queue, sút ra comboCount quả
+                wsClient.SimulateRoseGift(selectedUser, comboCount);
                 
-                // Simulate Rose Gift x3 (combo) → 1 entry trong queue, sút ra 3 quả
-                wsClient.SimulateRoseGift(selectedUser, 3);
-                
-                Debug.Log($"[TiktokReceiverTest] 🌹x3 KEY PRESSED: G → Rose Gift x3 COMBO from {selectedUser} (will shoot 3 balls at once!)");
+                Debug.Log($"[TiktokReceiverTest] 🌹 KEY PRESSED: O → Rose Gift x{comboCount} COMBO from {selectedUser} (will shoot {comboCount} balls at once!)");
             }
             else
             {
@@ -287,6 +274,7 @@ public class TiktokReceiverTest : MonoBehaviour {
         int currentCount = heartManager != null ? heartManager.GetCurrentHeartCount() : 0;
         bool isSuperKickActive = heartManager != null ? heartManager.IsSuperKickActive() : false;
         int queueCount = heartManager != null ? heartManager.GetQueueCount() : 0;
+        int comboO = Mathf.Max(1, comboBallsO);
         
         string instructions = 
             "=== TIKTOK RECEIVER TEST ===\n" +
@@ -294,8 +282,7 @@ public class TiktokReceiverTest : MonoBehaviour {
             $"{call5EnemyKey} → Call 5 Enemy\n" +
             "U → Add Heart (random user)\n" +
             "R → Rose Gift x1 (1 ball)\n" +
-            "G → Rose Gift x3 COMBO (3 balls)\n" +
-            "O → Rose Gift x5 COMBO (5 balls)\n" +
+            $"O → Rose Gift x{comboO} COMBO ({comboO} balls)\n" +
             "P → Perfume Gift (Call5Enemy)\n" +
             $"    💖 Hearts: {currentCount}/100 (always active)\n" +
             $"    📋 Queue: {queueCount} entry waiting\n" +
