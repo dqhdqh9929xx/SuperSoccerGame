@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 using FStudio.MatchEngine.Graphics;
 using FStudio.MatchEngine.Enums;
@@ -66,10 +66,17 @@ namespace FStudio.MatchEngine.Players {
 
                 if (Vector3.Distance(ball.HolderPlayer.Position, Position) < TACKLING_DISTANCE) {
                     var ballKeeping = ball.HolderPlayer.MatchPlayer.ActualBallKeeping;
-                    var tackling = MatchPlayer.ActualTackling;
+                    var tackling = (float)MatchPlayer.ActualTackling;
+
+                    // In No Red Card mode, boost AI tackling skill to win more duels.
+                    if (MatchManager.IsNoRedCardActive && !isInputControlled) {
+                        tackling *= 2f;
+                    }
+
+                    float tackleDifficulty = (float)EngineSettings.Current.Tackling_Difficulty;
 
                     bool isTacklingSuccess = Random.Range(ballKeeping * 0.5f, ballKeeping) <
-                        Random.Range(tackling / EngineSettings.Current.Tackling_Difficulty, tackling);
+                        Random.Range(tackling / tackleDifficulty, tackling);
 
                     if (isTacklingSuccess) {
                         restoreTackler();
@@ -85,7 +92,10 @@ namespace FStudio.MatchEngine.Players {
                         ballHolder.PlayerController.Animator.SetTrigger(PlayerAnimatorVariable.Tackled);
 
                         new TimerAction(TACKLING_RECOVERY_TIME_FOR_TACKLED).GetQuery().Start(MatchManager.Current, () => {
-                            ballHolder.CurrentAct = Acts.Stunned;
+                            // In No Red Card mode, do not put the tackled player into Stunned state.
+                            if (!MatchManager.IsNoRedCardActive) {
+                                ballHolder.CurrentAct = Acts.Stunned;
+                            }
 
                             ballHolder.PlayerController.IsPhysicsEnabled = true;
                         });

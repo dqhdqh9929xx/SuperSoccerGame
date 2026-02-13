@@ -13,6 +13,7 @@ using FStudio.MatchEngine.Balls;
 using FStudio.MatchEngine.Tactics;
 
 using System.Collections.Generic;
+using FStudio.MatchEngine;
 using FStudio.MatchEngine.Players.Behaviours;
 using System.Threading.Tasks;
 using FStudio.MatchEngine.Utilities;
@@ -259,6 +260,11 @@ namespace FStudio.MatchEngine.Players {
 
         private void OnCollisionEnter (Collision collision) {
             if (!PlayerController.IsPhysicsEnabled) {
+                return;
+            }
+
+            // In No Red Card mode, disable shoulder-to-shoulder strength challenges.
+            if (MatchManager.IsNoRedCardActive) {
                 return;
             }
 

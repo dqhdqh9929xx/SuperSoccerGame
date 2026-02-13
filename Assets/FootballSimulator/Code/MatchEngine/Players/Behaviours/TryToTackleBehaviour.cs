@@ -1,8 +1,9 @@
-﻿using FStudio.MatchEngine.Enums;
+using FStudio.MatchEngine.Enums;
 using UnityEngine;
 using FStudio.Data;
 using System.Linq;
 using FStudio.MatchEngine.Players.PlayerController;
+using FStudio.MatchEngine;
 
 namespace FStudio.MatchEngine.Players.Behaviours {
     public class TryToTackleBehaviour : BaseBehaviour {
@@ -127,10 +128,21 @@ namespace FStudio.MatchEngine.Players.Behaviours {
                 // we need to go for tackling.
                 Player.MoveTo(deltaTime, final, true);
 
-                // different distance check for tackling.
-                if (dot < -0.25f && Vector3.Distance(holderPlayerPos, playerPos) < PlayerBase.TACKLING_DISTANCE / 1.5f) {
-                    Player.Tackle(ball);
-                    return false;
+                var distanceToHolder = Vector3.Distance(holderPlayerPos, playerPos);
+
+                // In No Red Card mode, AI will always slide tackle when close enough,
+                // ignoring fair-play angle checks.
+                if (MatchManager.IsNoRedCardActive && !isInputControlled) {
+                    if (distanceToHolder < PlayerBase.TACKLING_DISTANCE) {
+                        Player.Tackle(ball);
+                        return false;
+                    }
+                } else {
+                    // Default behaviour: require good angle + closer distance.
+                    if (dot < -0.25f && distanceToHolder < PlayerBase.TACKLING_DISTANCE / 1.5f) {
+                        Player.Tackle(ball);
+                        return false;
+                    }
                 }
 
                 return true;

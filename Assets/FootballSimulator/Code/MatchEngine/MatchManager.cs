@@ -118,6 +118,32 @@ namespace FStudio.MatchEngine {
         public GameTeam GameTeam2 = default;
         public GameTeam UserTeam { private set; get; }
 
+        #region No Red Card mode
+        [Header("No Red Card Settings")]
+        [SerializeField] private float noRedCardDurationSeconds = 60f;
+
+        private bool isNoRedCardActive;
+        private float noRedCardEndTime;
+
+        /// <summary>
+        /// Returns true while No Red Card mode is active.
+        /// </summary>
+        public static bool IsNoRedCardActive => Current != null && Current.isNoRedCardActive;
+
+        /// <summary>
+        /// Remaining seconds for No Red Card mode. Returns 0 when inactive.
+        /// </summary>
+        public static float NoRedCardRemainingTime {
+            get {
+                if (Current == null || !Current.isNoRedCardActive) {
+                    return 0f;
+                }
+
+                return Mathf.Max(0f, Current.noRedCardEndTime - Time.time);
+            }
+        }
+        #endregion
+
         private Rect goalNet1Rect;
         private Rect goalNet2Rect;
 
@@ -610,6 +636,7 @@ namespace FStudio.MatchEngine {
             ball.ResetBall(midPoint);
 
             MatchFlags = MatchStatus.NotPlaying;
+            isNoRedCardActive = false;
         }
 
         private async Task CreateReferees () {
@@ -736,6 +763,34 @@ namespace FStudio.MatchEngine {
             }
 
             return tactics;
+        }
+
+        private void Update() {
+            UpdateNoRedCardTimer();
+        }
+
+        public static void ActivateNoRedCardMode(float? durationOverrideSeconds = null) {
+            if (Current == null) {
+                return;
+            }
+
+            var duration = durationOverrideSeconds ?? Current.noRedCardDurationSeconds;
+
+            Current.isNoRedCardActive = true;
+            Current.noRedCardEndTime = Time.time + duration;
+
+            Debug.Log($"[NoRedCard] Activated for {duration} seconds");
+        }
+
+        private void UpdateNoRedCardTimer() {
+            if (!isNoRedCardActive) {
+                return;
+            }
+
+            if (Time.time >= noRedCardEndTime) {
+                isNoRedCardActive = false;
+                Debug.Log("[NoRedCard] Deactivated");
+            }
         }
 
         private void LateUpdate() {
