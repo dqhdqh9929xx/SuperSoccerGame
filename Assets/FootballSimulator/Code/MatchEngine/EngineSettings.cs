@@ -191,6 +191,9 @@ namespace FStudio.MatchEngine {
 
         public float AgileToDirectionWhenHoldingBallModifier = 2;
 
+        [Tooltip("Tốc độ quay thêm khi Super Kick đang bật (cầu thủ quay về hướng cầu gôn trước khi sút). > 1 = quay nhanh hơn.")]
+        public float AgileToDirectionWhenSuperKickModifier = 1.5f;
+
         [Header ("Agile to direction")]
         public AnimationCurve AgileToDirectionAngleDifferencyHardness;
         public AnimationCurve AgileToDirectionMoveSpeedHardness;

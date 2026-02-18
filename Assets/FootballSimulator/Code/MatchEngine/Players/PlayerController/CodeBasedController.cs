@@ -314,7 +314,15 @@ namespace FStudio.MatchEngine.Players.PlayerController {
             LerpRotation(
                 in deltaTime, 
                 Quaternion.LookRotation(lookDirection),
-                agileSpeed * (BasePlayer.IsHoldingBall ? EngineSettings.Current.AgileToDirectionWhenHoldingBallModifier : 1));
+                agileSpeed *
+                GetTurnModifier());
+
+            float GetTurnModifier() {
+                float turnModifier = BasePlayer.IsHoldingBall ? EngineSettings.Current.AgileToDirectionWhenHoldingBallModifier : 1f;
+                if (BasePlayer.IsHoldingBall && MatchManager.Current != null && MatchManager.Current.IsSuperKick)
+                    turnModifier *= EngineSettings.Current.AgileToDirectionWhenSuperKickModifier;
+                return turnModifier;
+            }
 
             float angle = Vector3.SignedAngle(transform.forward, lookDirection, Vector3.up);
 
