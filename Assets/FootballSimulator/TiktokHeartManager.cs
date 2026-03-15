@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 using FStudio.MatchEngine;
 
 /// <summary>
@@ -38,6 +39,10 @@ public class TiktokHeartManager : MonoBehaviour
     
     [Header("Debug")]
     public bool showDebugLogs = true;
+
+    [Header("UI")]
+    [Tooltip("TextMeshPro để hiển thị tên user đang Super Kick (mỗi tên một dòng)")]
+    [SerializeField] private TMP_Text superKickUserText;
     
     [Header("Queue Status (Read Only)")]
     [SerializeField] private int queueCount = 0;
@@ -52,6 +57,9 @@ public class TiktokHeartManager : MonoBehaviour
     
     // Flag để kiểm tra xem Super Kick có đang active không
     private bool isSuperKickActive = false;
+
+    // Flag để kiểm tra có người xếp hàng trong lúc Super Kick đang chạy
+    private bool hasQueuedDuringActive = false;
     
     // Tên người đang được hiển thị (đang Super Kick)
     private string selectedUserName = "";
@@ -107,7 +115,21 @@ public class TiktokHeartManager : MonoBehaviour
                 }
                 
                 // Clear tên hiện tại
-                selectedUserName = "";
+                SetSelectedUserNamesUI("");
+
+                // Nếu có người xếp hàng trong lúc Super Kick đang chạy
+                // thì xả toàn bộ vào một Super Kick duy nhất
+                if (hasQueuedDuringActive && ListViewerTiktokSuperKick.Count > 0)
+                {
+                    if (showDebugLogs)
+                    {
+                        Debug.Log($"[TiktokHeartManager] 🚀 Flushing {ListViewerTiktokSuperKick.Count} queued entries into ONE Super Kick!");
+                    }
+
+                    ProcessFlushSuperKick();
+                    hasQueuedDuringActive = false;
+                    return;
+                }
                 
                 // Bắt đầu countdown nếu còn user trong queue
                 if (ListViewerTiktokSuperKick.Count > 0)
@@ -224,6 +246,12 @@ public class TiktokHeartManager : MonoBehaviour
         
         // Chỉ thêm 1 entry duy nhất vào queue, lưu comboCount để nhân bản bóng khi sút
         ListViewerTiktokSuperKick.Add(new SuperKickEntry(userName, count));
+
+        // Nếu đang có Super Kick active, đánh dấu là có người xếp hàng trong lúc đang chạy
+        if (isSuperKickActive)
+        {
+            hasQueuedDuringActive = true;
+        }
         
         if (showDebugLogs)
         {
@@ -245,6 +273,10 @@ public class TiktokHeartManager : MonoBehaviour
                 Debug.Log($"[TiktokHeartManager] ⚡ Queue was empty, processing immediately!");
             }
             ProcessNextSuperKick();
+        }
+        else if (isSuperKickActive && showDebugLogs)
+        {
+            Debug.Log($"[TiktokHeartManager] ⏳ Queued during active Super Kick. Queue size: {ListViewerTiktokSuperKick.Count}");
         }
     }
     
@@ -268,7 +300,7 @@ public class TiktokHeartManager : MonoBehaviour
         ListViewerTiktokSuperKick.RemoveAt(0);
         
         // Set tên hiện tại
-        selectedUserName = entry.userName;
+        SetSelectedUserNamesUI(entry.userName);
         
         if (showDebugLogs)
         {
@@ -286,6 +318,70 @@ public class TiktokHeartManager : MonoBehaviour
             Debug.LogWarning("[TiktokHeartManager] Cannot trigger Super Kick - TiktokReceiver is null!");
         }
         
+        // Reset countdown
+        countdown = 0;
+    }
+
+    /// <summary>
+    /// Xả toàn bộ queue vào 1 Super Kick duy nhất
+    /// - Số bóng bay ra = tổng comboCount của các entry
+    /// - Hiển thị danh sách tên user (không lặp)
+    /// </summary>
+    private void ProcessFlushSuperKick()
+    {
+        if (ListViewerTiktokSuperKick.Count == 0)
+        {
+            if (showDebugLogs)
+            {
+                Debug.Log("[TiktokHeartManager] Flush requested but queue is empty.");
+            }
+            return;
+        }
+
+        int totalComboCount = 0;
+        HashSet<string> uniqueNames = new HashSet<string>();
+
+        foreach (var entry in ListViewerTiktokSuperKick)
+        {
+            totalComboCount += Mathf.Max(1, entry.comboCount);
+            if (!string.IsNullOrEmpty(entry.userName))
+            {
+                uniqueNames.Add(entry.userName);
+            }
+        }
+
+        if (totalComboCount <= 0)
+        {
+            totalComboCount = 1;
+        }
+
+        string mergedNames = uniqueNames.Count > 0 ? string.Join(", ", uniqueNames) : "";
+
+        // Clear queue
+        ListViewerTiktokSuperKick.Clear();
+
+        // Set tên hiện tại (không lặp)
+        SetSelectedUserNamesUI(mergedNames.Replace(", ", "\n"));
+
+        if (showDebugLogs)
+        {
+            Debug.Log($"[TiktokHeartManager] 🚀 Flush Super Kick: {uniqueNames.Count} users, total combo x{totalComboCount} balls");
+            if (!string.IsNullOrEmpty(mergedNames))
+            {
+                Debug.Log($"[TiktokHeartManager] Users: {mergedNames}");
+            }
+        }
+
+        // Trigger Super Kick với tổng combo count
+        if (tiktokReceiver != null)
+        {
+            tiktokReceiver.TriggerSuperKick(totalComboCount);
+        }
+        else
+        {
+            Debug.LogWarning("[TiktokHeartManager] Cannot trigger Super Kick - TiktokReceiver is null!");
+        }
+
         // Reset countdown
         countdown = 0;
     }
@@ -330,13 +426,26 @@ public class TiktokHeartManager : MonoBehaviour
     {
         return selectedUserName;
     }
+
+    /// <summary>
+    /// Set và hiển thị tên người được chọn lên UI (mỗi tên một dòng)
+    /// </summary>
+    private void SetSelectedUserNamesUI(string names)
+    {
+        selectedUserName = names ?? "";
+
+        if (superKickUserText != null)
+        {
+            superKickUserText.text = selectedUserName;
+        }
+    }
     
     /// <summary>
     /// Clear tên người được chọn
     /// </summary>
     public void ClearSelectedUserName()
     {
-        selectedUserName = "";
+        SetSelectedUserNamesUI("");
     }
     
     /// <summary>
