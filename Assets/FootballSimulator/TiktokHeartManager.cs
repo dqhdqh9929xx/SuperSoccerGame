@@ -36,6 +36,9 @@ public class TiktokHeartManager : MonoBehaviour
     
     [Tooltip("Thời gian chờ giữa các Super Kick (giây)")]
     public float superKickDelay = 3f;
+
+    [Tooltip("Thời gian chờ sau khi Super Kick kết thúc để gộp queue (giây)")]
+    public float superKickEndFlushDelay = 10f;
     
     [Header("Debug")]
     public bool showDebugLogs = true;
@@ -60,6 +63,9 @@ public class TiktokHeartManager : MonoBehaviour
 
     // Flag để kiểm tra có người xếp hàng trong lúc Super Kick đang chạy
     private bool hasQueuedDuringActive = false;
+
+    // Flag để chờ gộp queue sau khi Super Kick kết thúc
+    private bool isWaitingForFlushAfterEnd = false;
     
     // Tên người đang được hiển thị (đang Super Kick)
     private string selectedUserName = "";
@@ -118,16 +124,15 @@ public class TiktokHeartManager : MonoBehaviour
                 SetSelectedUserNamesUI("");
 
                 // Nếu có người xếp hàng trong lúc Super Kick đang chạy
-                // thì xả toàn bộ vào một Super Kick duy nhất
+                // thì chờ 10 giây rồi xả toàn bộ vào một Super Kick duy nhất
                 if (hasQueuedDuringActive && ListViewerTiktokSuperKick.Count > 0)
                 {
+                    isWaitingForFlushAfterEnd = true;
+                    countdown = superKickEndFlushDelay;
                     if (showDebugLogs)
                     {
-                        Debug.Log($"[TiktokHeartManager] 🚀 Flushing {ListViewerTiktokSuperKick.Count} queued entries into ONE Super Kick!");
+                        Debug.Log($"[TiktokHeartManager] ⏳ Super Kick ended. Waiting {superKickEndFlushDelay}s then flushing {ListViewerTiktokSuperKick.Count} entries...");
                     }
-
-                    ProcessFlushSuperKick();
-                    hasQueuedDuringActive = false;
                     return;
                 }
                 
@@ -153,9 +158,28 @@ public class TiktokHeartManager : MonoBehaviour
         }
         
         // ===== QUEUE PROCESSING =====
-        // Nếu Super Kick không active và có user trong queue
         if (!isSuperKickActive && ListViewerTiktokSuperKick.Count > 0)
         {
+            // Nếu đang chờ gộp sau khi Super Kick kết thúc
+            if (isWaitingForFlushAfterEnd)
+            {
+                countdown -= Time.deltaTime;
+
+                if (countdown <= 0)
+                {
+                    if (showDebugLogs)
+                    {
+                        Debug.Log($"[TiktokHeartManager] 🚀 Flush delay complete. Flushing {ListViewerTiktokSuperKick.Count} entries now...");
+                    }
+
+                    ProcessFlushSuperKick();
+                    hasQueuedDuringActive = false;
+                    isWaitingForFlushAfterEnd = false;
+                }
+
+                return;
+            }
+
             // Nếu chưa có countdown, bắt đầu countdown
             if (countdown <= 0)
             {
