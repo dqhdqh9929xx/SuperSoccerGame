@@ -360,6 +360,16 @@ namespace FStudio.MatchEngine.Players {
                 return;
             }
 
+            var matchManager = MatchManager.Current;
+            if (matchManager != null && matchManager.IsSuperKick && IsHoldingBall) {
+                var superKick = Behaviours.FirstOrDefault(x => x is SuperKickBehaviour) as SuperKickBehaviour;
+                if (superKick != null && superKick.Behave(ActiveBehaviour == superKick)) {
+                    ActiveBehaviour = superKick;
+                    NextBehaviour = time + BEHAVIOUR_CHANGE_OFFSET_AS_SECONDS;
+                    return;
+                }
+            }
+
             var skipRate = difficultySkipRate[GameTeam.Team.AILevel];
 
             if (Random.Range (0, 100) < skipRate) {
@@ -1404,6 +1414,15 @@ namespace FStudio.MatchEngine.Players {
 
             ActiveBehaviour = null;
             #endregion
+
+            var matchManager = MatchManager.Current;
+            if (matchManager != null && matchManager.IsSuperKick) {
+                var superKick = Behaviours.FirstOrDefault(x => x is SuperKickBehaviour) as SuperKickBehaviour;
+                if (superKick != null && superKick.Behave(false)) {
+                    ActiveBehaviour = superKick;
+                    NextBehaviour = Time.time + BEHAVIOUR_CHANGE_OFFSET_AS_SECONDS;
+                }
+            }
         }
 
         public virtual void OnBallRelease() { IsHoldingBall = false; }

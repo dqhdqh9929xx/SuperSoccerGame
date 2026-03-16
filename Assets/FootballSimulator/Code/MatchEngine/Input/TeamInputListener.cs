@@ -355,12 +355,20 @@ namespace FStudio.MatchEngine.Input {
                 return;
             }
 
-            if (direction.magnitude > 0.2f) {
-                m_lastValidDirection = direction;
-            }
+            var matchManager = MatchManager.Current;
+            var forceSuperKick = matchManager != null && matchManager.IsSuperKick && ActivePlayer.IsHoldingBall;
 
-            if (m_lastValidDirection.magnitude < 0.2f) {
+            if (forceSuperKick) {
+                direction = Vector3.zero;
                 m_lastValidDirection = ActivePlayer.Rotation * Vector3.forward;
+            } else {
+                if (direction.magnitude > 0.2f) {
+                    m_lastValidDirection = direction;
+                }
+
+                if (m_lastValidDirection.magnitude < 0.2f) {
+                    m_lastValidDirection = ActivePlayer.Rotation * Vector3.forward;
+                }
             }
 
             var behaviours = ActivePlayer.Behaviours.

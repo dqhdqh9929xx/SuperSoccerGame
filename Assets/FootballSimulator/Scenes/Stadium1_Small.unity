@@ -4438,7 +4438,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   heartThreshold: 100
   superKickDelay: 3
+  superKickEndFlushDelay: 15
   showDebugLogs: 1
+  superKickUserText: {fileID: 0}
   queueCount: 0
   currentCountdown: 0
   isWaitingForNextKick: 0
